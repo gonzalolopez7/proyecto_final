@@ -4,12 +4,9 @@ namespace SGCS.Domain.Entities;
 
 public class Proveedor : ISoftDeletableEntity
 {
-    public Proveedor()
-    {
-        Id = Guid.NewGuid().ToString();
-    }
+    public Proveedor() => Id = Guid.NewGuid().ToString();
 
-    public string Id { get; set; }
+    public string Id { get; private set; }
     public required string Nombre { get; set; }
     public required string RazonSocial { get; set; }
     public required string Cuit { get; set; }
