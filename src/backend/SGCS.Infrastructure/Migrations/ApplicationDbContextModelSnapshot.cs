@@ -113,10 +113,157 @@ namespace SGCS.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("SGCS.Domain.Entities.Categoria", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdPadre")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdPadre");
+
+                    b.ToTable("Categorias");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Fit", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Fits");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Genero", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Generos");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Material", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Materiales");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Producto", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("IdCategoria")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdFit")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdGenero")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdMaterial")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdTemporada")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdCategoria");
+
+                    b.HasIndex("IdFit");
+
+                    b.HasIndex("IdGenero");
+
+                    b.HasIndex("IdMaterial");
+
+                    b.HasIndex("IdTemporada");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Productos");
+                });
+
             modelBuilder.Entity("SGCS.Domain.Entities.Proveedor", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("text");
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
 
                     b.Property<string>("Cuit")
                         .IsRequired()
@@ -171,6 +318,25 @@ namespace SGCS.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Proveedores");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Temporada", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Temporadas");
                 });
 
             modelBuilder.Entity("SGCS.Infrastructure.Identity.ApplicationRole", b =>
@@ -349,6 +515,55 @@ namespace SGCS.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SGCS.Domain.Entities.Categoria", b =>
+                {
+                    b.HasOne("SGCS.Domain.Entities.Categoria", "Padre")
+                        .WithMany("Subcategorias")
+                        .HasForeignKey("IdPadre")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Padre");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Producto", b =>
+                {
+                    b.HasOne("SGCS.Domain.Entities.Categoria", "Categoria")
+                        .WithMany()
+                        .HasForeignKey("IdCategoria")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SGCS.Domain.Entities.Fit", "Fit")
+                        .WithMany()
+                        .HasForeignKey("IdFit")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SGCS.Domain.Entities.Genero", "Genero")
+                        .WithMany()
+                        .HasForeignKey("IdGenero")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SGCS.Domain.Entities.Material", "Material")
+                        .WithMany()
+                        .HasForeignKey("IdMaterial")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SGCS.Domain.Entities.Temporada", "Temporada")
+                        .WithMany()
+                        .HasForeignKey("IdTemporada")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Categoria");
+
+                    b.Navigation("Fit");
+
+                    b.Navigation("Genero");
+
+                    b.Navigation("Material");
+
+                    b.Navigation("Temporada");
+                });
+
             modelBuilder.Entity("SGCS.Infrastructure.Identity.ApplicationUserRole", b =>
                 {
                     b.HasOne("SGCS.Infrastructure.Identity.ApplicationRole", "Role")
@@ -366,6 +581,11 @@ namespace SGCS.Infrastructure.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Categoria", b =>
+                {
+                    b.Navigation("Subcategorias");
                 });
 
             modelBuilder.Entity("SGCS.Infrastructure.Identity.ApplicationRole", b =>

@@ -38,6 +38,12 @@ public class ApplicationDbContext : IdentityDbContext<
     }
 
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
+    public DbSet<Producto> Productos => Set<Producto>();
+    public DbSet<Categoria> Categorias => Set<Categoria>();
+    public DbSet<Genero> Generos => Set<Genero>();
+    public DbSet<Temporada> Temporadas => Set<Temporada>();
+    public DbSet<Fit> Fits => Set<Fit>();
+    public DbSet<Material> Materiales => Set<Material>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
