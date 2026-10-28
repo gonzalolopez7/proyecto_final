@@ -1,0 +1,27 @@
+# Normalización automática de saltos de línea para archivos de texto
+* text=auto eol=lf
+
+# Forzar LF para scripts, código fuente y configuraciones
+*.cs text diff=csharp eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Archivos de soluciones de Visual Studio
+*.sln text eol=crlf
+
+# Archivos binarios
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+*.pdf binary
+*.dll binary
+*.exe binary
