@@ -15,7 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Sparkles
+  Sparkles,
+  RefreshCcw
 } from 'lucide-react';
 import {
   obtenerProductos,
@@ -493,34 +494,63 @@ export default function Productos() {
 
   return (
     <main className="view productos-view">
-      {/* Cabecera de Página */}
       <header className="page-head">
         <article>
           <h1>Productos</h1>
           <p>
-            Gestión integral de productos, categorías y atributos.
+            Módulo de gestión de productos, categorías y atributos
           </p>
         </article>
 
         {pestanaActiva === 'productos' && (
-          <button type="button" className="btn btn-primary" onClick={abrirNuevoProducto}>
-            <Plus size={16} />
-            Nuevo producto
-          </button>
+          <div>
+            <button type="button" className="btn btn-primary" onClick={abrirNuevoProducto}>
+              <Plus size={16} />
+              Nuevo producto
+            </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => cargarProductos(pagina)}
+            >
+              <RefreshCcw size={16} />
+              Actualizar listado
+            </button>
+          </div>
         )}
 
         {pestanaActiva === 'categorias' && (
-          <button type="button" className="btn btn-primary" onClick={abrirNuevaCategoria}>
-            <Plus size={16} />
-            Nueva categoría
-          </button>
+          <div>
+            <button type="button" className="btn btn-primary" onClick={abrirNuevaCategoria}>
+              <Plus size={16} />
+              Nueva categoría
+            </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => cargarCatalogosMaestros()}
+            >
+              <RefreshCcw size={16} />
+              Actualizar listado
+            </button>
+          </div>
         )}
 
         {pestanaActiva === 'atributos' && (
-          <button type="button" className="btn btn-primary" onClick={abrirNuevoAtributo}>
-            <Plus size={16} />
-            {tituloAtributoSingular === 'temporada' ? 'Nueva temporada' : `Nuevo ${tituloAtributoSingular}`}
-          </button>
+          <div>
+            <button type="button" className="btn btn-primary" onClick={abrirNuevoAtributo}>
+              <Plus size={16} />
+              {tituloAtributoSingular === 'temporada' ? 'Nueva temporada' : `Nuevo ${tituloAtributoSingular}`}
+            </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => cargarCatalogosMaestros()}
+            >
+              <RefreshCcw size={16} />
+              Actualizar listado
+            </button>
+          </div>
         )}
       </header>
 
