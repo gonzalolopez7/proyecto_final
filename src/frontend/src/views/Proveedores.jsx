@@ -25,6 +25,7 @@ import {
   restaurarProveedor
 } from '../services/proveedorService';
 import { formatoMoneda } from '../utils/numeroALetras';
+import { validarCuit } from '../utils/validaciones';
 import { mensajeDeError, codigoDeError } from '../services/errores';
 
 export default function Proveedores() {
@@ -122,7 +123,7 @@ export default function Proveedores() {
     setForm({
       nombre: prov.nombre || prov.razonSocial || '',
       razonSocial: prov.razonSocial || prov.nombre || '',
-      cuit: prov.cuit || '',
+      cuit: (prov.cuit || '').replace(/[-.\s]/g, ''),
       telefono: prov.telefono || '',
       email: prov.email || '',
       direccion: prov.direccion || '',
@@ -144,10 +145,21 @@ export default function Proveedores() {
       setError('La razón social fiscal es obligatoria.');
       return;
     }
-    if (!form.cuit.trim()) {
+
+    const cuitLimpio = form.cuit.trim().replace(/[-.\s]/g, '');
+    if (!cuitLimpio) {
       setError('El CUIT es obligatorio.');
       return;
     }
+    if (cuitLimpio.length !== 11 || !/^\d{11}$/.test(cuitLimpio)) {
+      setError('El CUIT debe tener exactamente 11 dígitos numéricos, sin guiones ni puntos.');
+      return;
+    }
+    if (!validarCuit(cuitLimpio)) {
+      setError('El CUIT ingresado no es válido.');
+      return;
+    }
+
     if (form.telefono && !/^\d{10}$/.test(form.telefono.trim())) {
       setError('El teléfono debe tener exactamente 10 dígitos numéricos (ej. 3811234567).');
       return;
@@ -158,11 +170,16 @@ export default function Proveedores() {
       setError('');
       setProveedorRestaurable(null);
 
+      const payload = {
+        ...form,
+        cuit: cuitLimpio,
+      };
+
       if (editandoId) {
-        await modificarProveedor(editandoId, form);
+        await modificarProveedor(editandoId, payload);
         setMensaje('Proveedor modificado exitosamente.');
       } else {
-        await altaProveedor(form);
+        await altaProveedor(payload);
         setMensaje('Proveedor registrado con éxito.');
       }
 
@@ -475,12 +492,16 @@ export default function Proveedores() {
 
               <div className="form-row-2">
                 <label>
-                  CUIT (formato XX-XXXXXXXX-X) *
+                  CUIT (11 dígitos, sin guiones ni puntos) *
                   <input
                     type="text"
+                    maxLength={11}
                     value={form.cuit}
-                    onChange={(e) => setForm({ ...form, cuit: e.target.value })}
-                    placeholder="30-71234567-8"
+                    onChange={(e) => {
+                      const soloNumeros = e.target.value.replace(/\D/g, '');
+                      setForm({ ...form, cuit: soloNumeros });
+                    }}
+                    placeholder="Ej. 30712345678"
                     required
                   />
                 </label>
