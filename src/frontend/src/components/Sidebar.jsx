@@ -2,6 +2,7 @@ import {
   LayoutDashboard, 
   Truck, 
   Users, 
+  Shirt,
   X 
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
@@ -18,6 +19,7 @@ const GRUPOS_NAVEGACION = [
   {
     titulo: 'Módulos',
     enlaces: [
+      { to: '/productos', texto: 'Productos', Icono: Shirt, roles: PERMISOS.productos },
       { to: '/proveedores', texto: 'Proveedores', Icono: Truck, roles: PERMISOS.proveedores },
       { to: '/usuarios', texto: 'Usuarios y roles', Icono: Users, roles: PERMISOS.usuarios },
     ],

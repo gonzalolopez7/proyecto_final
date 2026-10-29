@@ -10,6 +10,7 @@ import Login from './views/Login';
 import Dashboard from './views/Dashboard';
 import Proveedores from './views/Proveedores';
 import Usuarios from './views/Usuarios';
+import Productos from './views/Productos';
 
 function AppLayout() {
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -25,6 +26,10 @@ function AppLayout() {
 
             <Route element={<ProtectedRoute roles={PERMISOS.proveedores} />}>
               <Route path="/proveedores" element={<Proveedores />} />
+            </Route>
+
+            <Route element={<ProtectedRoute roles={PERMISOS.productos} />}>
+              <Route path="/productos" element={<Productos />} />
             </Route>
 
             <Route element={<ProtectedRoute roles={PERMISOS.usuarios} />}>
