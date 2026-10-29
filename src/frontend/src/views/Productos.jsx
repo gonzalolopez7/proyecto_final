@@ -196,10 +196,11 @@ export default function Productos() {
 
   function abrirNuevoProducto() {
     setEditandoProductoId(null);
+    const primerHoja = categorias.find((c) => !categorias.some((sub) => sub.idPadre === c.id));
     setFormProducto({
       nombre: '',
       descripcion: '',
-      idCategoria: categorias.length > 0 ? categorias[0].id : '',
+      idCategoria: primerHoja ? primerHoja.id : '',
       idGenero: '',
       idTemporada: '',
       idFit: '',
@@ -1047,11 +1048,15 @@ export default function Productos() {
                     required
                   >
                     <option value="" disabled>Seleccione una categoría...</option>
-                    {categorias.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.padreNombre ? `${c.padreNombre} > ${c.nombre}` : c.nombre}
-                      </option>
-                    ))}
+                    {categorias.map((c) => {
+                      const tieneSubcategorias = categorias.some((sub) => sub.idPadre === c.id);
+                      return (
+                        <option key={c.id} value={c.id} disabled={tieneSubcategorias}>
+                          {c.padreNombre ? `${c.padreNombre} > ${c.nombre}` : c.nombre}
+                          {tieneSubcategorias ? ' (Categoría padre)' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 </label>
               </div>
