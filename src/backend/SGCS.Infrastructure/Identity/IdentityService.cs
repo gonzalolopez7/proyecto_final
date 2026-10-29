@@ -42,10 +42,25 @@ public class IdentityService : IIdentityService
         );
     }
 
-    public async Task<PaginatedList<UserDto>> GetAsync(int page, int pageSize)
+    public async Task<PaginatedList<UserDto>> GetAsync(int page, int pageSize, string? search = null)
     {
-        var query = _userManager.Users
-            .AsNoTracking()
+        var usersQuery = _userManager.Users.AsNoTracking();
+
+        // Filtro por búsqueda textual (Nombre de usuario, Nombre, Apellido, Email, Teléfono, Rol)
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLower();
+            usersQuery = usersQuery.Where(u =>
+                (u.UserName != null && u.UserName.ToLower().Contains(term)) ||
+                (u.FirstName != null && u.FirstName.ToLower().Contains(term)) ||
+                (u.LastName != null && u.LastName.ToLower().Contains(term)) ||
+                (u.Email != null && u.Email.ToLower().Contains(term)) ||
+                (u.PhoneNumber != null && u.PhoneNumber.Contains(term)) ||
+                u.UserRoles.Any(ur => ur.Role.Name != null && ur.Role.Name.ToLower().Contains(term))
+            );
+        }
+
+        var query = usersQuery
             .OrderBy(u => u.UserName)
             .Select(u => new UserDto(
                 u.Id,
