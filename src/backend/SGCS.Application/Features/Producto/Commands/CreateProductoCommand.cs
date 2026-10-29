@@ -84,12 +84,18 @@ public class CreateProductoCommandHandler : IRequestHandler<CreateProductoComman
             return Result<string>.Failure(ProductoErrors.NameAlreadyExists(request.Nombre));
         }
 
-        // 2. Verificar existencia de la categoría obligatoria
+        // 2. Verificar existencia de la categoría obligatoria y que sea categoría hoja
         var categoriaExists = await _context.Categorias
             .AnyAsync(c => c.Id == request.IdCategoria, cancellationToken);
 
         if (!categoriaExists)
             return Result<string>.Failure(ProductoErrors.CategoriaNotFound(request.IdCategoria));
+
+        var hasChildren = await _context.Categorias
+            .AnyAsync(c => c.IdPadre == request.IdCategoria, cancellationToken);
+
+        if (hasChildren)
+            return Result<string>.Failure(ProductoErrors.CategoriaNotLeaf(request.IdCategoria));
 
         // 3. Verificar existencia de atributos opcionales
         if (!string.IsNullOrEmpty(request.IdGenero))

@@ -111,7 +111,7 @@ public class UpdateProductoCommandHandler : IRequestHandler<UpdateProductoComman
             }
         }
 
-        // 3. Si cambió la categoría, validar su existencia
+        // 3. Validar categoría (existencia si cambió y que sea categoría hoja)
         if (producto.IdCategoria != request.IdCategoria)
         {
             var categoriaExists = await _context.Categorias
@@ -120,6 +120,12 @@ public class UpdateProductoCommandHandler : IRequestHandler<UpdateProductoComman
             if (!categoriaExists)
                 return Result.Failure(ProductoErrors.CategoriaNotFound(request.IdCategoria));
         }
+
+        var hasChildren = await _context.Categorias
+            .AnyAsync(c => c.IdPadre == request.IdCategoria, cancellationToken);
+
+        if (hasChildren)
+            return Result.Failure(ProductoErrors.CategoriaNotLeaf(request.IdCategoria));
 
         // 4. Validar existencia de atributos si cambiaron o se especificaron
         if (!string.IsNullOrEmpty(request.IdGenero) && producto.IdGenero != request.IdGenero)

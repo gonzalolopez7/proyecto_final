@@ -15,7 +15,7 @@ public class GetProveedorByCuitQueryValidator : AbstractValidator<GetProveedorBy
     {
         RuleFor(x => x.Cuit)
             .NotEmpty()
-            .WithMessage("CUIT is required.");
+            .WithMessage("El CUIT es obligatorio.");
     }
 }
 

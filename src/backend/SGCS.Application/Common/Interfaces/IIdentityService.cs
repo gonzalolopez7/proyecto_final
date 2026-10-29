@@ -11,7 +11,7 @@ namespace SGCS.Application.Common.Interfaces;
 public interface IIdentityService
 {
     public Task<UserDto?> ValidateCredentialsAsync(string userName, string password);
-    public Task<PaginatedList<UserDto>> GetAsync(int page, int pageSize);
+    public Task<PaginatedList<UserDto>> GetAsync(int page, int pageSize, string? search = null);
     public Task<UserDto?> GetByIdAsync(string id);
     public Task<string?> GetRoleAsync(string userId);
     public Task<Result<string>> CreateAsync(string userName, string password, string firstName, string lastName, string? email = null, string? phoneNumber = null);

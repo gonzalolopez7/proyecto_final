@@ -16,7 +16,7 @@ public class GetUserByIdQueryValidator : AbstractValidator<GetUserByIdQuery>
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .WithMessage("User id is required.");
+            .WithMessage("El ID del usuario es obligatorio.");
     }
 }
 

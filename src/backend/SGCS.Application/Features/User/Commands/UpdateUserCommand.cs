@@ -30,40 +30,40 @@ public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .WithMessage("User id is required.");
+            .WithMessage("El ID del usuario es obligatorio.");
 
         RuleFor(x => x.UserName)
             .NotEmpty()
-            .WithMessage("Username is required.")
+            .WithMessage("El nombre de usuario es obligatorio.")
             .MinimumLength(4)
-            .WithMessage("Username must be at least 4 characters long.");
+            .WithMessage("El nombre de usuario debe tener al menos 4 caracteres.");
 
         RuleFor(x => x.Role)
             .NotEmpty()
-            .WithMessage("Role is required.")
+            .WithMessage("El rol es obligatorio.")
             .Must(x => Roles.SupportedRoles.Contains(x))
-            .WithMessage("Invalid role.");
+            .WithMessage("El rol especificado no es válido.");
 
         RuleFor(x => x.FirstName)
             .NotEmpty()
-            .WithMessage("First name is required.");
+            .WithMessage("El nombre es obligatorio.");
 
         RuleFor(x => x.LastName)
             .NotEmpty()
-            .WithMessage("Last name is required.");
+            .WithMessage("El apellido es obligatorio.");
 
         RuleFor(x => x.Email)
             .EmailAddress()
             .When(x => !string.IsNullOrEmpty(x.Email))
-            .WithMessage("Invalid email address.");
+            .WithMessage("El formato del correo electrónico no es válido.");
 
         RuleFor(x => x.PhoneNumber)
             .Length(10)
             .When(x => !string.IsNullOrEmpty(x.PhoneNumber))
-            .WithMessage("Phone number must be 10 digits long.")
+            .WithMessage("El teléfono debe tener 10 dígitos.")
             .Matches("^[0-9]*$")
             .When(x => !string.IsNullOrEmpty(x.PhoneNumber))
-            .WithMessage("Phone number must contain only digits.");
+            .WithMessage("El teléfono solo debe contener dígitos.");
     }
 }
 

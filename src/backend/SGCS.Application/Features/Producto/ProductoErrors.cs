@@ -39,6 +39,11 @@ public static class ProductoErrors
             "Producto.CategoriaNotFound",
             $"No se encontró la categoría con ID '{categoriaId}'.");
 
+    public static Error CategoriaNotLeaf(string categoriaId) =>
+        Error.Conflict(
+            "Producto.CategoriaNotLeaf",
+            $"No se puede asignar la categoría con ID '{categoriaId}' porque no es una categoría hoja (contiene subcategorías).");
+
     public static Error GeneroNotFound(string generoId) =>
         Error.NotFound(
             "Producto.GeneroNotFound",

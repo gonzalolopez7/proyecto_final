@@ -25,6 +25,7 @@ import {
   restaurarProveedor
 } from '../services/proveedorService';
 import { formatoMoneda } from '../utils/numeroALetras';
+import { validarCuit } from '../utils/validaciones';
 import { mensajeDeError, codigoDeError } from '../services/errores';
 
 export default function Proveedores() {
@@ -66,7 +67,7 @@ export default function Proveedores() {
       setError('');
       setProveedorRestaurable(null);
 
-      const data = await obtenerProveedores({ page: pag, pageSize: tamanoPagina });
+      const data = await obtenerProveedores({ page: pag, pageSize: tamanoPagina, search: busqueda });
       if (data && Array.isArray(data.items)) {
         setProveedores(data.items);
         setTotalPaginas(data.totalPages || 1);
@@ -84,46 +85,14 @@ export default function Proveedores() {
     } finally {
       setLoading(false);
     }
-  }, [tamanoPagina]);
+  }, [tamanoPagina, busqueda]);
 
   useEffect(() => {
-    let ignorar = false;
-    obtenerProveedores({ page: pagina, pageSize: tamanoPagina })
-      .then((data) => {
-        if (ignorar) return;
-        if (data && Array.isArray(data.items)) {
-          setProveedores(data.items);
-          setTotalPaginas(data.totalPages || 1);
-          setTotalItems(data.totalCount || data.items.length);
-        } else if (Array.isArray(data)) {
-          setProveedores(data);
-          setTotalPaginas(data.totalPages || 1);
-          setTotalItems(data.totalCount || data.length);
-        }
-      })
-      .catch((err) => {
-        if (ignorar) return;
-        setError(mensajeDeError(err, 'No se pudieron cargar los proveedores.'));
-      })
-      .finally(() => {
-        if (!ignorar) setLoading(false);
-      });
-    return () => { ignorar = true; };
-  }, [pagina, tamanoPagina]);
+    cargarDatos(pagina);
+  }, [pagina, cargarDatos]);
 
-  // Filtrado reactivo en memoria
-  const proveedoresFiltrados = useMemo(() => {
-    if (!busqueda.trim()) return proveedores;
-    const txt = busqueda.toLowerCase();
-    return proveedores.filter((p) =>
-      p.nombre?.toLowerCase().includes(txt) ||
-      p.razonSocial?.toLowerCase().includes(txt) ||
-      p.cuit?.toLowerCase().includes(txt) ||
-      p.direccion?.toLowerCase().includes(txt) ||
-      p.telefono?.toLowerCase().includes(txt) ||
-      p.email?.toLowerCase().includes(txt)
-    );
-  }, [proveedores, busqueda]);
+  // Proveedores obtenidos y filtrados desde el servidor
+  const proveedoresFiltrados = proveedores;
 
   function abrirNuevo() {
     setEditandoId(null);
@@ -154,7 +123,7 @@ export default function Proveedores() {
     setForm({
       nombre: prov.nombre || prov.razonSocial || '',
       razonSocial: prov.razonSocial || prov.nombre || '',
-      cuit: prov.cuit || '',
+      cuit: (prov.cuit || '').replace(/[-.\s]/g, ''),
       telefono: prov.telefono || '',
       email: prov.email || '',
       direccion: prov.direccion || '',
@@ -176,10 +145,21 @@ export default function Proveedores() {
       setError('La razón social fiscal es obligatoria.');
       return;
     }
-    if (!form.cuit.trim()) {
+
+    const cuitLimpio = form.cuit.trim().replace(/[-.\s]/g, '');
+    if (!cuitLimpio) {
       setError('El CUIT es obligatorio.');
       return;
     }
+    if (cuitLimpio.length !== 11 || !/^\d{11}$/.test(cuitLimpio)) {
+      setError('El CUIT debe tener exactamente 11 dígitos numéricos, sin guiones ni puntos.');
+      return;
+    }
+    if (!validarCuit(cuitLimpio)) {
+      setError('El CUIT ingresado no es válido.');
+      return;
+    }
+
     if (form.telefono && !/^\d{10}$/.test(form.telefono.trim())) {
       setError('El teléfono debe tener exactamente 10 dígitos numéricos (ej. 3811234567).');
       return;
@@ -190,11 +170,16 @@ export default function Proveedores() {
       setError('');
       setProveedorRestaurable(null);
 
+      const payload = {
+        ...form,
+        cuit: cuitLimpio,
+      };
+
       if (editandoId) {
-        await modificarProveedor(editandoId, form);
+        await modificarProveedor(editandoId, payload);
         setMensaje('Proveedor modificado exitosamente.');
       } else {
-        await altaProveedor(form);
+        await altaProveedor(payload);
         setMensaje('Proveedor registrado con éxito.');
       }
 
@@ -297,9 +282,24 @@ const formatearCuit = (cuit) => {
               type="text"
               placeholder="Buscar por Nombre, Razón Social, CUIT, contacto..."
               value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              onChange={(e) => {
+                setBusqueda(e.target.value);
+                setPagina(1);
+              }}
             />
           </div>
+          {busqueda && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              onClick={() => {
+                setBusqueda('');
+                setPagina(1);
+              }}
+            >
+              <X size={14} /> Limpiar búsqueda
+            </button>
+          )}
         </div>
       </section>
 
@@ -319,7 +319,11 @@ const formatearCuit = (cuit) => {
           <div className="empty-state">
             <Truck size={48} className="empty-icon" />
             <h3>No se encontraron proveedores</h3>
-            <p>Comenzá registrando el primer proveedor para gestionar compras y precios textiles.</p>
+            <p>
+              {busqueda
+                ? `No hay proveedores que coincidan con la búsqueda "${busqueda}".`
+                : 'Comenzá registrando el primer proveedor para gestionar compras y precios textiles.'}
+            </p>
           </div>
         ) : (
           <>
@@ -495,16 +499,16 @@ const formatearCuit = (cuit) => {
 
               <div className="form-row-2">
                 <label>
-                  CUIT (formato solo numérico) *
+                  CUIT (11 dígitos, sin guiones ni puntos) *
                   <input
                     type="text"
                     maxLength={11}
                     value={form.cuit}
-                    onChange={(e) =>{
+                    onChange={(e) => {
                       const soloNumeros = e.target.value.replace(/\D/g, '');
                       setForm({ ...form, cuit: soloNumeros });
                     }}
-                    placeholder="Ingresa los 11 números"
+                    placeholder="Ej. 30712345678"
                     required
                   />
                 </label>

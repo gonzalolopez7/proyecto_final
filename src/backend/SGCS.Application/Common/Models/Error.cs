@@ -6,7 +6,7 @@ namespace SGCS.Application.Common.Models;
 public record Error
 {
     public static readonly Error None = new(string.Empty, string.Empty, ErrorType.Failure);
-    public static readonly Error NullValue = new("General.NullValue", "The specified result value is null.", ErrorType.Failure);
+    public static readonly Error NullValue = new("General.NullValue", "El valor del resultado especificado es nulo.", ErrorType.Failure);
 
     public string Code { get; init; }
     public string Description { get; init; }

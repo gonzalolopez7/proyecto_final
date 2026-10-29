@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Users,
   UserPlus,
+  Search,
   Edit3,
   Trash2,
   Check,
@@ -65,7 +66,8 @@ export default function Usuarios() {
   const [mensaje, setMensaje] = useState('');
   const [usuarioRestaurable, setUsuarioRestaurable] = useState(null);
 
-  // Paginación
+  // Búsqueda y Paginación
+  const [busqueda, setBusqueda] = useState('');
   const [pagina, setPagina] = useState(1);
   const [tamanoPagina] = useState(10);
   const [totalPaginas, setTotalPaginas] = useState(1);
@@ -76,7 +78,7 @@ export default function Usuarios() {
       setLoading(true);
       setError('');
       setUsuarioRestaurable(null);
-      const data = await obtenerUsuarios({ page: pag, pageSize: tamanoPagina });
+      const data = await obtenerUsuarios({ page: pag, pageSize: tamanoPagina, search: busqueda });
       if (data && Array.isArray(data.items)) {
         setUsuarios(data.items);
         setTotalPaginas(data.totalPages || 1);
@@ -94,32 +96,11 @@ export default function Usuarios() {
     } finally {
       setLoading(false);
     }
-  }, [tamanoPagina]);
+  }, [tamanoPagina, busqueda]);
 
   useEffect(() => {
-    let ignorar = false;
-    obtenerUsuarios({ page: pagina, pageSize: tamanoPagina })
-      .then((data) => {
-        if (ignorar) return;
-        if (data && Array.isArray(data.items)) {
-          setUsuarios(data.items);
-          setTotalPaginas(data.totalPages || 1);
-          setTotalItems(data.totalCount || data.items.length);
-        } else if (Array.isArray(data)) {
-          setUsuarios(data);
-          setTotalPaginas(data.totalPages || 1);
-          setTotalItems(data.totalCount || data.length);
-        }
-      })
-      .catch((err) => {
-        if (ignorar) return;
-        setError(mensajeDeError(err, 'No se pudieron cargar los usuarios.'));
-      })
-      .finally(() => {
-        if (!ignorar) setLoading(false);
-      });
-    return () => { ignorar = true; };
-  }, [pagina, tamanoPagina]);
+    cargarUsuarios(pagina);
+  }, [pagina, cargarUsuarios]);
 
   function cambiarCampo(event) {
     const { name, value } = event.target;
@@ -608,6 +589,36 @@ export default function Usuarios() {
         </div>
       )}
 
+      {/* Filtros */}
+      <section className="catalog-filters">
+        <div className="filter-controls">
+          <div className="filter-search-box full-width-sm">
+            <Search size={14} className="filter-icon" />
+            <input
+              type="text"
+              placeholder="Buscar por Usuario, Nombre, Email, Rol, Teléfono..."
+              value={busqueda}
+              onChange={(e) => {
+                setBusqueda(e.target.value);
+                setPagina(1);
+              }}
+            />
+          </div>
+          {busqueda && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              onClick={() => {
+                setBusqueda('');
+                setPagina(1);
+              }}
+            >
+              <X size={14} /> Limpiar búsqueda
+            </button>
+          )}
+        </div>
+      </section>
+
       {/* Grilla de Usuarios */}
       <section className="card">
         <header className="card-head">
@@ -629,7 +640,12 @@ export default function Usuarios() {
         ) : usuarios.length === 0 ? (
           <div className="empty-state">
             <Users size={48} className="empty-icon" />
-            <h3>No hay usuarios registrados</h3>
+            <h3>No se encontraron usuarios</h3>
+            <p>
+              {busqueda
+                ? `No hay usuarios que coincidan con la búsqueda "${busqueda}".`
+                : 'No hay usuarios registrados en el sistema.'}
+            </p>
           </div>
         ) : (
           <>
