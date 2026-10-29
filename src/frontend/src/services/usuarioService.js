@@ -19,6 +19,10 @@ export async function obtenerUsuarios(params = { page: 1, pageSize: 20 }) {
     PageSize: params.pageSize ?? 20,
   };
 
+  if (params.search || params.Search) {
+    query.Search = (params.search || params.Search).trim();
+  }
+
   const response = await api.get('/api/User', { params: query });
   const data = response.data;
   const rawItems = Array.isArray(data) ? data : (data?.items || []);
