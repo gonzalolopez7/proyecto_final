@@ -671,7 +671,7 @@ export default function Productos() {
                   Productos registrados ({totalItems})
                 </h2>
               </div>
-              <div className="filter-search-box" style={{ maxWidth: '300px' }}>
+              <div className="filter-search-box" style={{ maxWidth: '400px' }}>
                 <Search size={14} className="filter-icon" />
                 <input
                   type="text"
