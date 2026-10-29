@@ -485,7 +485,7 @@ export default function Productos() {
     switch (tipoAtributo) {
       case 'generos': return 'género';
       case 'temporadas': return 'temporada';
-      case 'fits': return 'fit / calce';
+      case 'fits': return 'fit';
       case 'materiales': return 'material';
       default: return 'atributo';
     }
@@ -496,9 +496,9 @@ export default function Productos() {
       {/* Cabecera de Página */}
       <header className="page-head">
         <article>
-          <h1>Catálogo de Productos</h1>
+          <h1>Productos</h1>
           <p>
-            Gestión integral de artículos textiles, líneas de prendas, categorías y atributos de diseño.
+            Gestión integral de productos, categorías y atributos.
           </p>
         </article>
 
@@ -519,7 +519,7 @@ export default function Productos() {
         {pestanaActiva === 'atributos' && (
           <button type="button" className="btn btn-primary" onClick={abrirNuevoAtributo}>
             <Plus size={16} />
-            Nuevo {tituloAtributoSingular}
+            {tituloAtributoSingular === 'temporada' ? 'Nueva temporada' : `Nuevo ${tituloAtributoSingular}`}
           </button>
         )}
       </header>
@@ -580,18 +580,6 @@ export default function Productos() {
           {/* Filtros de Productos */}
           <section className="catalog-filters" style={{ marginBottom: '16px' }}>
             <div className="filter-controls" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-              <div className="filter-search-box" style={{ flex: '1 1 260px' }}>
-                <Search size={14} className="filter-icon" />
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o descripción de producto..."
-                  value={busqueda}
-                  onChange={(e) => {
-                    setBusqueda(e.target.value);
-                    setPagina(1);
-                  }}
-                />
-              </div>
 
               {/* Filtro por Categoría */}
               <select
@@ -676,12 +664,25 @@ export default function Productos() {
 
           {/* Tabla de Productos */}
           <section className="card">
-            <header className="card-head">
-              <h2>
-                <Shirt size={18} />
-                Artículos Registrados ({totalItems})
-              </h2>
-              <span className="muted text-sm">Prendas y modelos textiles activos</span>
+            <header className="card-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2>
+                  <Shirt size={18} />
+                  Productos registrados ({totalItems})
+                </h2>
+              </div>
+              <div className="filter-search-box" style={{ maxWidth: '300px' }}>
+                <Search size={14} className="filter-icon" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre o descripción..."
+                  value={busqueda}
+                  onChange={(e) => {
+                    setBusqueda(e.target.value);
+                    setPagina(1);
+                  }}
+                />
+              </div>
             </header>
 
             {loadingProductos ? (
@@ -690,7 +691,7 @@ export default function Productos() {
               <div className="empty-state">
                 <Shirt size={48} className="empty-icon" />
                 <h3>No se encontraron productos</h3>
-                <p>Comenzá registrando el primer artículo o modificá los criterios de búsqueda.</p>
+                <p>Comenzá registrando el primer producto o modificá los filtros de búsqueda.</p>
               </div>
             ) : (
               <>
@@ -700,7 +701,7 @@ export default function Productos() {
                       <tr>
                         <th scope="col">PRODUCTO / DESCRIPCIÓN</th>
                         <th scope="col">CATEGORÍA</th>
-                        <th scope="col">ATRIBUTOS DE PRENDA</th>
+                        <th scope="col">ATRIBUTOS</th>
                         <th scope="col" className="actions-header">ACCIONES</th>
                       </tr>
                     </thead>
@@ -716,7 +717,7 @@ export default function Productos() {
                             </div>
                           </th>
                           <td>
-                            <span className="category-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '12px', fontSize: '12px', background: '#F1F5F9', color: '#334155', fontWeight: 500 }}>
+                            <span className="category-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '12px', fontSize: '12px' }}>
                               <FolderTree size={12} />
                               {prod.categoriaNombre}
                             </span>
@@ -724,22 +725,22 @@ export default function Productos() {
                           <td>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                               {prod.generoNombre && (
-                                <span className="term-badge" title="Género">
+                                <span className="category-pill" title="Género">
                                   {prod.generoNombre}
                                 </span>
                               )}
                               {prod.temporadaNombre && (
-                                <span className="barcode-badge" title="Temporada">
+                                <span className="category-pill" title="Temporada">
                                   {prod.temporadaNombre}
                                 </span>
                               )}
                               {prod.fitNombre && (
-                                <span className="term-badge" title="Calce / Fit">
-                                  Fit: {prod.fitNombre}
+                                <span className="category-pill" title="Fit">
+                                  {prod.fitNombre}
                                 </span>
                               )}
                               {prod.materialNombre && (
-                                <span className="barcode-badge" title="Material">
+                                <span className="category-pill" title="Material">
                                   {prod.materialNombre}
                                 </span>
                               )}
@@ -813,16 +814,15 @@ export default function Productos() {
             <div>
               <h2>
                 <FolderTree size={18} />
-                Gestión de Categorías ({categorias.length})
+                Categorías registradas ({categorias.length})
               </h2>
-              <span className="muted text-sm">Estructura jerárquica de prendas y rubros textiles</span>
             </div>
 
             <div className="filter-search-box" style={{ maxWidth: '300px' }}>
               <Search size={14} className="filter-icon" />
               <input
                 type="text"
-                placeholder="Filtrar categorías..."
+                placeholder="Buscar por nombre..."
                 value={busquedaCategoria}
                 onChange={(e) => setBusquedaCategoria(e.target.value)}
               />
@@ -840,7 +840,7 @@ export default function Productos() {
               <table>
                 <thead>
                   <tr>
-                    <th scope="col">NOMBRE DE CATEGORÍA</th>
+                    <th scope="col">CATEGORÍA</th>
                     <th scope="col">CATEGORÍA PADRE (JERARQUÍA)</th>
                     <th scope="col" className="actions-header">ACCIONES</th>
                   </tr>
@@ -857,8 +857,8 @@ export default function Productos() {
                             <FolderTree size={12} /> {cat.padreNombre}
                           </span>
                         ) : (
-                          <span className="muted text-sm font-semibold" style={{ color: 'var(--primary, #4F46E5)' }}>
-                            ● Categoría Principal
+                          <span className="category-pill" style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '12px', background: '#F1F5F9', color: '#334155', fontWeight: 'bold' }}>
+                            Categoría principal
                           </span>
                         )}
                       </td>
@@ -898,9 +898,8 @@ export default function Productos() {
             <div>
               <h2>
                 <Tags size={18} />
-                Atributos de Producto ({listaAtributosActual.length})
+                {tipoAtributo[0].toUpperCase() + tipoAtributo.slice(1)} ({listaAtributosActual.length})
               </h2>
-              <span className="muted text-sm">Tablas maestras de clasificación: Géneros, Temporadas, Fits y Materiales</span>
             </div>
 
             <div className="filter-search-box" style={{ maxWidth: '280px' }}>
@@ -935,7 +934,7 @@ export default function Productos() {
               className={`btn btn-small ${tipoAtributo === 'fits' ? 'btn-primary' : ''}`}
               onClick={() => { setTipoAtributo('fits'); setBusquedaAtributo(''); }}
             >
-              Fits / Calces ({fits.length})
+              Fits ({fits.length})
             </button>
             <button
               type="button"
@@ -950,14 +949,18 @@ export default function Productos() {
             <div className="empty-state">
               <Tags size={48} className="empty-icon" />
               <h3>No se encontraron registros de {tipoAtributo}</h3>
-              <p>Hacé clic en "Nuevo {tituloAtributoSingular}" para agregar el primer registro a este catálogo.</p>
+              {tituloAtributoSingular === 'temporada' ? (
+                <p>Hacé clic en "Nueva temporada" para agregar el primer registro a este catálogo.</p>
+              ) : (
+                <p>Hacé clic en "Nuevo {tituloAtributoSingular}" para agregar el primer registro a este catálogo.</p>
+              )}
             </div>
           ) : (
             <div className="table-scroll">
               <table>
                 <thead>
                   <tr>
-                    <th scope="col">NOMBRE DE {tituloAtributoSingular.toUpperCase()}</th>
+                    <th scope="col" style={{ width: '90%' }}>NOMBRE DE {tituloAtributoSingular.toUpperCase()}</th>
                     <th scope="col" className="actions-header">ACCIONES</th>
                   </tr>
                 </thead>
@@ -1001,7 +1004,7 @@ export default function Productos() {
         <div className="modal-backdrop" onClick={() => setModalProductoAbierto(false)}>
           <div className="modal-content modal-lg" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
-              <h2>{editandoProductoId ? 'Modificar Producto' : 'Nuevo Producto Textil'}</h2>
+              <h2>{editandoProductoId ? 'Modificar producto' : 'Nuevo producto'}</h2>
               <button type="button" className="btn-close" onClick={() => setModalProductoAbierto(false)}>
                 <X size={18} />
               </button>
@@ -1035,13 +1038,13 @@ export default function Productos() {
                     type="text"
                     value={formProducto.nombre}
                     onChange={(e) => setFormProducto({ ...formProducto, nombre: e.target.value })}
-                    placeholder="Ej. Remera Básica Cuello Redondo"
+                    placeholder="Ej. Remera Básica"
                     required
                   />
                 </label>
 
                 <label>
-                  Categoría Textil *
+                  Categoría *
                   <select
                     value={formProducto.idCategoria}
                     onChange={(e) => setFormProducto({ ...formProducto, idCategoria: e.target.value })}
@@ -1103,7 +1106,7 @@ export default function Productos() {
 
               <div className="form-row-2">
                 <label>
-                  Fit / Calce (opcional)
+                  Fit (opcional)
                   <select
                     value={formProducto.idFit}
                     onChange={(e) => setFormProducto({ ...formProducto, idFit: e.target.value })}
@@ -1175,12 +1178,12 @@ export default function Productos() {
               </label>
 
               <label>
-                Categoría Padre (opcional)
+                Categoría padre
                 <select
                   value={formCategoria.idPadre}
                   onChange={(e) => setFormCategoria({ ...formCategoria, idPadre: e.target.value })}
                 >
-                  <option value="">Ninguna (Categoría Principal / Raíz)</option>
+                  <option value="">Ninguna (Categoría principal)</option>
                   {categorias
                     .filter((c) => !editandoCategoriaId || c.id !== editandoCategoriaId)
                     .map((c) => (
@@ -1236,9 +1239,9 @@ export default function Productos() {
                   onChange={(e) => setFormAtributo({ ...formAtributo, nombre: e.target.value })}
                   placeholder={
                     tipoAtributo === 'generos' ? 'Ej. Masculino, Femenino, Unisex...' :
-                    tipoAtributo === 'temporadas' ? 'Ej. Verano 2026, Invierno 2026...' :
-                    tipoAtributo === 'fits' ? 'Ej. Regular, Slim Fit, Oversize...' :
-                    'Ej. Algodón 100%, Lino, Denim...'
+                      tipoAtributo === 'temporadas' ? 'Ej. Verano 2026, Invierno 2026...' :
+                        tipoAtributo === 'fits' ? 'Ej. Regular, Slim Fit, Oversize...' :
+                          'Ej. Algodón 100%, Lino, Denim...'
                   }
                   required
                 />

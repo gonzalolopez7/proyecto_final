@@ -350,11 +350,6 @@ export default function Usuarios() {
                 <h2 id="usuario-modal-titulo">
                   {editandoId ? 'Modificar usuario' : 'Nuevo usuario'}
                 </h2>
-                <p className="modal-subtitle">
-                  {editandoId
-                    ? 'Actualizá los datos de perfil y rol del usuario.'
-                    : 'Creá la cuenta y asignale los permisos correspondientes.'}
-                </p>
               </div>
               <button type="button" className="btn-close" onClick={cerrarModal} aria-label="Cerrar">
                 <X size={18} />
