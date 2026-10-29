@@ -244,7 +244,14 @@ export default function Proveedores() {
       setError(mensajeDeError(err, 'No se pudo eliminar el proveedor.'));
     }
   }
-
+const formatearCuit = (cuit) => {
+  if (!cuit) return 'Sin CUIT';
+  const soloNumeros = cuit.toString().replace(/\D/g, '');
+  if (soloNumeros.length === 11) {
+    return `${soloNumeros.slice(0, 2)}-${soloNumeros.slice(2, 10)}-${soloNumeros.slice(10)}`;
+  }
+  return cuit;
+};
   return (
     <main className="view proveedores-view">
       <header className="page-head">
@@ -336,29 +343,29 @@ export default function Proveedores() {
                     <tr key={prov.id} className="table-row-hover">
                       <th scope="row" className="row-title">
                         <div className="supplier-name-cell">
-                          <strong>{prov.nombre}</strong>
+                          <strong>{prov.nombre} </strong>
                           {prov.razonSocial && prov.razonSocial !== prov.nombre && (
                             <small className="muted">{prov.razonSocial}</small>
                           )}
                         </div>
                       </th>
-                      <td>
-                        <code>{prov.cuit || 'Sin CUIT'}</code>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <code>{formatearCuit(prov.cuit) || 'Sin CUIT'}</code>
                       </td>
                       <td>
                         <div className="contact-cell">
                           {prov.telefono && (
-                            <span className="flex items-center gap-1">
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                               <Phone size={12} /> {prov.telefono}
                             </span>
                           )}
                           {prov.email && (
-                            <small className="muted flex items-center gap-1">
+                            <small className="muted" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                               <Mail size={12} /> {prov.email}
                             </small>
                           )}
                           {prov.direccion && (
-                            <small className="muted flex items-center gap-1">
+                            <small className="muted" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                               <MapPin size={12} /> {prov.direccion}
                             </small>
                           )}
@@ -488,12 +495,16 @@ export default function Proveedores() {
 
               <div className="form-row-2">
                 <label>
-                  CUIT (formato XX-XXXXXXXX-X) *
+                  CUIT (formato solo numérico) *
                   <input
                     type="text"
+                    maxLength={11}
                     value={form.cuit}
-                    onChange={(e) => setForm({ ...form, cuit: e.target.value })}
-                    placeholder="30-71234567-8"
+                    onChange={(e) =>{
+                      const soloNumeros = e.target.value.replace(/\D/g, '');
+                      setForm({ ...form, cuit: soloNumeros });
+                    }}
+                    placeholder="Ingresa los 11 números"
                     required
                   />
                 </label>
@@ -541,7 +552,7 @@ export default function Proveedores() {
                   type="text"
                   value={form.direccion}
                   onChange={(e) => setForm({ ...form, direccion: e.target.value })}
-                  placeholder="Calle, número, localidad"
+                  placeholder="Calle número, localidad"
                 />
               </label>
 
