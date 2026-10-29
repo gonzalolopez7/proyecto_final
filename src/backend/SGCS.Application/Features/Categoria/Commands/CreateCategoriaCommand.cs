@@ -44,14 +44,21 @@ public class CreateCategoriaCommandHandler : IRequestHandler<CreateCategoriaComm
         if (exists)
             return Result<string>.Failure(CategoriaErrors.NameAlreadyExists(request.Nombre));
 
-        // 2. Si se especificó categoría padre, validar que exista
+        // 2. Si se especificó categoría padre, validar que exista y que no tenga productos asociados
         if (!string.IsNullOrEmpty(request.IdPadre))
         {
-            var padreExists = await _context.Categorias
-                .AnyAsync(c => c.Id == request.IdPadre, cancellationToken);
+            var padre = await _context.Categorias
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == request.IdPadre, cancellationToken);
 
-            if (!padreExists)
+            if (padre is null)
                 return Result<string>.Failure(CategoriaErrors.ParentNotFound(request.IdPadre));
+
+            var padreTieneProductos = await _context.Productos
+                .AnyAsync(p => p.IdCategoria == request.IdPadre, cancellationToken);
+
+            if (padreTieneProductos)
+                return Result<string>.Failure(CategoriaErrors.ParentHasProducts(padre.Nombre));
         }
 
         // 3. Crear entidad

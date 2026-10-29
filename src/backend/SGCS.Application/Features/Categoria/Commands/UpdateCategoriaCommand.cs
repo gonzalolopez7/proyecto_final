@@ -73,14 +73,21 @@ public class UpdateCategoriaCommandHandler : IRequestHandler<UpdateCategoriaComm
                 return Result.Failure(CategoriaErrors.NameAlreadyExists(request.Nombre));
         }
 
-        // 4. Si cambió la categoría padre, validar existencia y evitar referencias circulares
+        // 4. Si cambió la categoría padre, validar existencia, productos asociados y evitar referencias circulares
         if (!string.IsNullOrEmpty(request.IdPadre) && categoria.IdPadre != request.IdPadre)
         {
-            var padreExists = await _context.Categorias
-                .AnyAsync(c => c.Id == request.IdPadre, cancellationToken);
+            var padre = await _context.Categorias
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == request.IdPadre, cancellationToken);
 
-            if (!padreExists)
+            if (padre is null)
                 return Result.Failure(CategoriaErrors.ParentNotFound(request.IdPadre));
+
+            var padreTieneProductos = await _context.Productos
+                .AnyAsync(p => p.IdCategoria == request.IdPadre, cancellationToken);
+
+            if (padreTieneProductos)
+                return Result.Failure(CategoriaErrors.ParentHasProducts(padre.Nombre));
 
             // Verificar que request.IdPadre no sea descendiente de request.Id
             var currentParentId = request.IdPadre;
