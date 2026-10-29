@@ -1184,8 +1184,9 @@ export default function Productos() {
                   {categorias
                     .filter((c) => !editandoCategoriaId || c.id !== editandoCategoriaId)
                     .map((c) => (
-                      <option key={c.id} value={c.id}>
+                      <option key={c.id} value={c.id} disabled={c.tieneProductos}>
                         {c.padreNombre ? `${c.padreNombre} > ${c.nombre}` : c.nombre}
+                        {c.tieneProductos ? ' (Tiene productos asignados)' : ''}
                       </option>
                     ))}
                 </select>

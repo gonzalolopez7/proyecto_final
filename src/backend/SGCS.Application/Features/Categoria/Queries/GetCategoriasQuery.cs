@@ -44,7 +44,8 @@ public class GetCategoriasQueryHandler : IRequestHandler<GetCategoriasQuery, Res
                 c.Id,
                 c.Nombre,
                 c.IdPadre,
-                c.Padre != null ? c.Padre.Nombre : null
+                c.Padre != null ? c.Padre.Nombre : null,
+                _context.Productos.Any(p => p.IdCategoria == c.Id)
             ))
             .ToListAsync(cancellationToken);
 

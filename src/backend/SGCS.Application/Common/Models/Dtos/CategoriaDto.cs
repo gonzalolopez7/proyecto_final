@@ -4,7 +4,8 @@ public record CategoriaDto(
     string Id,
     string Nombre,
     string? IdPadre,
-    string? PadreNombre
+    string? PadreNombre,
+    bool TieneProductos = false
 );
 
 public record CategoriaTreeDto(
