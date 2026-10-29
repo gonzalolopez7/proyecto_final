@@ -15,7 +15,8 @@ import {
   MapPin,
   RotateCcw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  RefreshCcw
 } from 'lucide-react';
 import {
   obtenerProveedores,
@@ -61,7 +62,7 @@ export default function Proveedores() {
     saldoInicial: 0,
   });
 
-  const cargarDatos = useCallback(async (pag = 1) => {
+  const cargarProveedores = useCallback(async (pag = 1) => {
     try {
       setLoading(true);
       setError('');
@@ -88,8 +89,8 @@ export default function Proveedores() {
   }, [tamanoPagina, busqueda]);
 
   useEffect(() => {
-    cargarDatos(pagina);
-  }, [pagina, cargarDatos]);
+    cargarProveedores(pagina);
+  }, [pagina, cargarProveedores]);
 
   // Proveedores obtenidos y filtrados desde el servidor
   const proveedoresFiltrados = proveedores;
@@ -184,7 +185,7 @@ export default function Proveedores() {
       }
 
       setModalAbierto(false);
-      await cargarDatos(pagina);
+      await cargarProveedores(pagina);
     } catch (err) {
       console.error(err);
       const cod = codigoDeError(err);
@@ -208,7 +209,7 @@ export default function Proveedores() {
       setMensaje(`Proveedor "${nombre}" restaurado exitosamente.`);
       setProveedorRestaurable(null);
       setModalAbierto(false);
-      await cargarDatos(pagina);
+      await cargarProveedores(pagina);
     } catch (err) {
       console.error(err);
       setError(mensajeDeError(err, 'No se pudo restaurar el proveedor.'));
@@ -223,7 +224,7 @@ export default function Proveedores() {
       setError('');
       await eliminarProveedor(id);
       setMensaje('Proveedor dado de baja correctamente.');
-      await cargarDatos(pagina);
+      await cargarProveedores(pagina);
     } catch (err) {
       console.error(err);
       setError(mensajeDeError(err, 'No se pudo eliminar el proveedor.'));
@@ -236,7 +237,7 @@ export default function Proveedores() {
         <article>
           <h1>Proveedores</h1>
           <p>
-            Directorio comercial textil, condiciones de pago y seguimiento de saldos con la nueva API SGCS.
+            Módulo de gestión de proveedores
           </p>
         </article>
 
@@ -247,6 +248,15 @@ export default function Proveedores() {
         >
           <Plus size={16} />
           Nuevo proveedor
+        </button>
+
+        <button
+          className="btn"
+          type="button"
+          onClick={() => cargarProveedores(pagina)}
+        >
+          <RefreshCcw size={16} />
+          Actualizar listado
         </button>
       </header>
 
@@ -269,18 +279,6 @@ export default function Proveedores() {
       {/* Filtros */}
       <section className="catalog-filters">
         <div className="filter-controls">
-          <div className="filter-search-box full-width-sm">
-            <Search size={14} className="filter-icon" />
-            <input
-              type="text"
-              placeholder="Buscar por Nombre, Razón Social, CUIT, contacto..."
-              value={busqueda}
-              onChange={(e) => {
-                setBusqueda(e.target.value);
-                setPagina(1);
-              }}
-            />
-          </div>
           {busqueda && (
             <button
               type="button"
@@ -298,12 +296,25 @@ export default function Proveedores() {
 
       {/* Listado de Proveedores */}
       <section className="card">
-        <header className="card-head">
-          <h2>
-            <Building2 size={18} />
-            Proveedores Registrados ({totalItems})
-          </h2>
-          <span className="muted text-sm">Condiciones comerciales de compra mayorista</span>
+        <header className="card-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2>
+              <Truck size={18} />
+              Proveedores Registrados ({totalItems})
+            </h2>
+          </div>
+          <div className="filter-search-box" style={{ maxWidth: '400px' }}>
+            <Search size={14} className="filter-icon" />
+            <input
+              type="text"
+              placeholder="Buscar por Nombre, Razón Social, CUIT, contacto..."
+              value={busqueda}
+              onChange={(e) => {
+                setBusqueda(e.target.value);
+                setPagina(1);
+              }}
+            />
+          </div>
         </header>
 
         {loading ? (
@@ -315,7 +326,7 @@ export default function Proveedores() {
             <p>
               {busqueda
                 ? `No hay proveedores que coincidan con la búsqueda "${busqueda}".`
-                : 'Comenzá registrando el primer proveedor para gestionar compras y precios textiles.'}
+                : 'Comenzá registrando el primer proveedor para gestionar compras y precios.'}
             </p>
           </div>
         ) : (
@@ -337,13 +348,13 @@ export default function Proveedores() {
                   const tieneSaldo = saldo > 0;
 
                   return (
-                    <tr key={prov.id} className="table-row-hover">
+                    <tr key={prov.id} className="table-row-hover" style={{ height: '85px' }}>
                       <th scope="row" className="row-title">
-                        <div className="supplier-name-cell">
-                          <strong>{prov.nombre}</strong>
-                          {prov.razonSocial && prov.razonSocial !== prov.nombre && (
-                            <small className="muted">{prov.razonSocial}</small>
-                          )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <strong style={{ fontSize: '14px', color: 'var(--ink, #0f172a)' }}>{prov.nombre}</strong>
+                          <span className="muted text-sm" style={{ fontWeight: 'normal', color: 'var(--ink-muted, #64748b)' }}>
+                            {prov.razonSocial}
+                          </span>
                         </div>
                       </th>
                       <td>
@@ -352,22 +363,22 @@ export default function Proveedores() {
                       <td>
                         <div className="contact-cell">
                           {prov.telefono && (
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1" style={{ display: 'block', fontSize: '12px' }}>
                               <Phone size={12} /> {prov.telefono}
                             </span>
                           )}
                           {prov.email && (
-                            <small className="muted flex items-center gap-1">
+                            <span className="flex items-center gap-1" style={{ display: 'block', fontSize: '12px' }}>
                               <Mail size={12} /> {prov.email}
-                            </small>
+                            </span>
                           )}
                           {prov.direccion && (
-                            <small className="muted flex items-center gap-1">
+                            <span className="flex items-center gap-1" style={{ display: 'block', fontSize: '12px' }}>
                               <MapPin size={12} /> {prov.direccion}
-                            </small>
+                            </span>
                           )}
                           {!prov.telefono && !prov.email && !prov.direccion && (
-                            <span className="muted text-sm">—</span>
+                            <span className="text-sm">—</span>
                           )}
                         </div>
                       </td>
