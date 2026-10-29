@@ -18,13 +18,13 @@ public class ResetPasswordCommandValidator : AbstractValidator<ResetPasswordComm
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .WithMessage("User id is required.");
+            .WithMessage("El ID del usuario es obligatorio.");
 
         RuleFor(x => x.NewPassword)
             .NotEmpty()
-            .WithMessage("Password is required.")
+            .WithMessage("La contraseña es obligatoria.")
             .MinimumLength(4)
-            .WithMessage("Password must be at least 4 characters long.");
+            .WithMessage("La contraseña debe tener al menos 4 caracteres.");
     }
 }
 

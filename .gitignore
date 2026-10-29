@@ -52,6 +52,7 @@ lerna-debug.log*
 **/bin/
 **/obj/
 **/publish/
+**/.nuget/
 
 # Archivos de usuario y cache de Visual Studio
 .vs/

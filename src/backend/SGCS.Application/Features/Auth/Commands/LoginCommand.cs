@@ -17,11 +17,11 @@ public class LoginCommandValidator : AbstractValidator<LoginCommand>
     {
         RuleFor(x => x.UserName)
             .NotEmpty()
-            .WithMessage("Username is required.");
+            .WithMessage("El nombre de usuario es obligatorio.");
 
         RuleFor(x => x.Password)
             .NotEmpty()
-            .WithMessage("Password is required.");
+            .WithMessage("La contraseña es obligatoria.");
     }
 }
 

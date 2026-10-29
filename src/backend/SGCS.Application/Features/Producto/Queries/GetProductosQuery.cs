@@ -30,7 +30,7 @@ public class GetProductosQueryValidator : AbstractValidator<GetProductosQuery>
             .GreaterThanOrEqualTo(1)
             .WithMessage("El tamaño de página debe ser mayor o igual a 1.")
             .LessThanOrEqualTo(100)
-            .WithMessage("El tamaño de página no puede exceder 100.");
+            .WithMessage("El tamaño de página no debe superar los 100.");
     }
 }
 

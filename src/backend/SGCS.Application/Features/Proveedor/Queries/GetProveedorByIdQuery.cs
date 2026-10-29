@@ -15,7 +15,7 @@ public class GetProveedorByIdQueryValidator : AbstractValidator<GetProveedorById
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .WithMessage("Proveedor id is required.");
+            .WithMessage("El ID del proveedor es obligatorio.");
     }
 }
 

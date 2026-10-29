@@ -36,46 +36,46 @@ public class UpdateProveedorCommandValidator : AbstractValidator<UpdateProveedor
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .WithMessage("Id is required.");
+            .WithMessage("El ID del proveedor es obligatorio.");
 
         RuleFor(x => x.Nombre)
             .NotEmpty()
-            .WithMessage("Nombre is required.")
+            .WithMessage("El nombre es obligatorio.")
             .MaximumLength(200)
-            .WithMessage("Nombre must not exceed 200 characters.");
+            .WithMessage("El nombre no debe superar los 200 caracteres.");
 
         RuleFor(x => x.RazonSocial)
             .NotEmpty()
-            .WithMessage("RazonSocial is required.")
+            .WithMessage("La razón social es obligatoria.")
             .MaximumLength(200)
-            .WithMessage("RazonSocial must not exceed 200 characters.");
+            .WithMessage("La razón social no debe superar los 200 caracteres.");
 
         RuleFor(x => x.Cuit)
             .NotEmpty()
-            .WithMessage("CUIT is required.")
+            .WithMessage("El CUIT es obligatorio.")
             .MaximumLength(20)
-            .WithMessage("CUIT must not exceed 20 characters.");
+            .WithMessage("El CUIT no debe superar los 20 caracteres.");
 
         RuleFor(x => x.Telefono)
             .Length(10)
             .When(x => !string.IsNullOrEmpty(x.Telefono))
-            .WithMessage("Telefono must be 10 digits long.")
+            .WithMessage("El teléfono debe tener 10 dígitos.")
             .Matches("^[0-9]*$")
             .When(x => !string.IsNullOrEmpty(x.Telefono))
-            .WithMessage("Telefono must contain only digits.");
+            .WithMessage("El teléfono solo debe contener dígitos.");
 
         RuleFor(x => x.Email)
             .EmailAddress()
             .When(x => !string.IsNullOrEmpty(x.Email))
-            .WithMessage("Email must be valid.");
+            .WithMessage("El formato del correo electrónico no es válido.");
 
         RuleFor(x => x.DiasPago)
             .GreaterThanOrEqualTo(0)
-            .WithMessage("DiasPago must be greater than or equal to 0.");
+            .WithMessage("Los días de pago deben ser mayores o iguales a 0.");
 
         RuleFor(x => x.SaldoInicial)
             .GreaterThanOrEqualTo(0)
-            .WithMessage("SaldoInicial must be greater than or equal to 0.");
+            .WithMessage("El saldo inicial debe ser mayor o igual a 0.");
     }
 }
 
