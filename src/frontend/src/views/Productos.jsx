@@ -1216,7 +1216,7 @@ export default function Productos() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
               <h2>
-                {editandoAtributoId ? `Modificar ${tituloAtributoSingular}` : `Nuevo ${tituloAtributoSingular}`}
+                {editandoAtributoId ? `Modificar ${tituloAtributoSingular}` : tituloAtributoSingular === 'temporada' ? 'Nueva temporada' : `Nuevo ${tituloAtributoSingular}`}
               </h2>
               <button type="button" className="btn-close" onClick={() => setModalAtributoAbierto(false)}>
                 <X size={18} />
@@ -1232,7 +1232,7 @@ export default function Productos() {
               )}
 
               <label>
-                Nombre del {tituloAtributoSingular} *
+                {tituloAtributoSingular === 'temporada' ? 'Nombre de la temporada' : `Nombre del ${tituloAtributoSingular}`} *
                 <input
                   type="text"
                   value={formAtributo.nombre}
@@ -1240,7 +1240,7 @@ export default function Productos() {
                   placeholder={
                     tipoAtributo === 'generos' ? 'Ej. Masculino, Femenino, Unisex...' :
                       tipoAtributo === 'temporadas' ? 'Ej. Verano 2026, Invierno 2026...' :
-                        tipoAtributo === 'fits' ? 'Ej. Regular, Slim Fit, Oversize...' :
+                        tipoAtributo === 'fits' ? 'Ej. Regular, Slim, Oversize...' :
                           'Ej. Algodón 100%, Lino, Denim...'
                   }
                   required
