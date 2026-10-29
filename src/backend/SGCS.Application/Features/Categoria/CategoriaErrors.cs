@@ -38,5 +38,10 @@ public static class CategoriaErrors
         Error.Conflict(
             "Categoria.HasProducts",
             $"No se puede eliminar la categoría con ID '{id}' porque tiene productos asociados.");
+
+    public static Error ParentHasProducts(string parentNombre) =>
+        Error.Conflict(
+            "Categoria.ParentHasProducts",
+            $"No se puede asignar la categoría '{parentNombre}' como padre porque tiene productos asociados.");
 }
 
