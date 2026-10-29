@@ -10,6 +10,9 @@ export async function obtenerProveedores(params = { page: 1, pageSize: 50 }) {
     Page: params.page ?? params.Page ?? 1,
     PageSize: params.pageSize ?? params.PageSize ?? 50,
   };
+  if (params.search || params.Search) {
+    query.Search = (params.search || params.Search).trim();
+  }
   const response = await api.get('/api/Proveedor', { params: query });
   const data = response.data;
   const rawItems = Array.isArray(data) ? data : (data?.items || []);

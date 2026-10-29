@@ -66,7 +66,7 @@ export default function Proveedores() {
       setError('');
       setProveedorRestaurable(null);
 
-      const data = await obtenerProveedores({ page: pag, pageSize: tamanoPagina });
+      const data = await obtenerProveedores({ page: pag, pageSize: tamanoPagina, search: busqueda });
       if (data && Array.isArray(data.items)) {
         setProveedores(data.items);
         setTotalPaginas(data.totalPages || 1);
@@ -84,46 +84,14 @@ export default function Proveedores() {
     } finally {
       setLoading(false);
     }
-  }, [tamanoPagina]);
+  }, [tamanoPagina, busqueda]);
 
   useEffect(() => {
-    let ignorar = false;
-    obtenerProveedores({ page: pagina, pageSize: tamanoPagina })
-      .then((data) => {
-        if (ignorar) return;
-        if (data && Array.isArray(data.items)) {
-          setProveedores(data.items);
-          setTotalPaginas(data.totalPages || 1);
-          setTotalItems(data.totalCount || data.items.length);
-        } else if (Array.isArray(data)) {
-          setProveedores(data);
-          setTotalPaginas(data.totalPages || 1);
-          setTotalItems(data.totalCount || data.length);
-        }
-      })
-      .catch((err) => {
-        if (ignorar) return;
-        setError(mensajeDeError(err, 'No se pudieron cargar los proveedores.'));
-      })
-      .finally(() => {
-        if (!ignorar) setLoading(false);
-      });
-    return () => { ignorar = true; };
-  }, [pagina, tamanoPagina]);
+    cargarDatos(pagina);
+  }, [pagina, cargarDatos]);
 
-  // Filtrado reactivo en memoria
-  const proveedoresFiltrados = useMemo(() => {
-    if (!busqueda.trim()) return proveedores;
-    const txt = busqueda.toLowerCase();
-    return proveedores.filter((p) =>
-      p.nombre?.toLowerCase().includes(txt) ||
-      p.razonSocial?.toLowerCase().includes(txt) ||
-      p.cuit?.toLowerCase().includes(txt) ||
-      p.direccion?.toLowerCase().includes(txt) ||
-      p.telefono?.toLowerCase().includes(txt) ||
-      p.email?.toLowerCase().includes(txt)
-    );
-  }, [proveedores, busqueda]);
+  // Proveedores obtenidos y filtrados desde el servidor
+  const proveedoresFiltrados = proveedores;
 
   function abrirNuevo() {
     setEditandoId(null);
@@ -290,9 +258,24 @@ export default function Proveedores() {
               type="text"
               placeholder="Buscar por Nombre, Razón Social, CUIT, contacto..."
               value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              onChange={(e) => {
+                setBusqueda(e.target.value);
+                setPagina(1);
+              }}
             />
           </div>
+          {busqueda && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline"
+              onClick={() => {
+                setBusqueda('');
+                setPagina(1);
+              }}
+            >
+              <X size={14} /> Limpiar búsqueda
+            </button>
+          )}
         </div>
       </section>
 
@@ -312,7 +295,11 @@ export default function Proveedores() {
           <div className="empty-state">
             <Truck size={48} className="empty-icon" />
             <h3>No se encontraron proveedores</h3>
-            <p>Comenzá registrando el primer proveedor para gestionar compras y precios textiles.</p>
+            <p>
+              {busqueda
+                ? `No hay proveedores que coincidan con la búsqueda "${busqueda}".`
+                : 'Comenzá registrando el primer proveedor para gestionar compras y precios textiles.'}
+            </p>
           </div>
         ) : (
           <>
