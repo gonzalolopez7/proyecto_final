@@ -29,21 +29,23 @@ public class GetProveedorByIdQueryHandler : IRequestHandler<GetProveedorByIdQuer
     {
         var proveedor = await _context.Proveedores
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken);
+            .Where(p => p.Id == request.Id)
+            .Select(p => new ProveedorDto(
+                p.Id,
+                p.Nombre,
+                p.RazonSocial,
+                p.Cuit,
+                p.Telefono,
+                p.Direccion,
+                p.Email,
+                p.DiasPago,
+                p.SaldoInicial
+            ))
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (proveedor is null)
             return Result<ProveedorDto>.Failure(ProveedorErrors.NotFound(request.Id));
 
-        return Result<ProveedorDto>.Success(new ProveedorDto(
-            proveedor.Id,
-            proveedor.Nombre,
-            proveedor.RazonSocial,
-            proveedor.Cuit,
-            proveedor.Telefono,
-            proveedor.Direccion,
-            proveedor.Email,
-            proveedor.DiasPago,
-            proveedor.SaldoInicial
-        ));
+        return Result<ProveedorDto>.Success(proveedor);
     }
 }
