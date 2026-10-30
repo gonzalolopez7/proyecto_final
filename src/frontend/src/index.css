@@ -723,7 +723,7 @@ button {
 .filter-search-box {
   position: relative;
   flex: 1;
-  min-width: 260px;
+  width: 100%;
 }
 
 .filter-search-box .filter-icon {

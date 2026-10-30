@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Phone,
-  Mail
+  Mail,
+  RefreshCcw
 } from 'lucide-react';
 import {
   obtenerUsuarios,
@@ -309,14 +310,23 @@ export default function Usuarios() {
         <article>
           <h1>Usuarios y roles</h1>
           <p>
-            Control de acceso basado en roles (Admin, Encargado, Comprador, Operadores) y administración de credenciales de seguridad.
+            Módulo de gestión de usuarios, roles, permisos y credenciales
           </p>
         </article>
-
-        <button type="button" className="btn btn-primary" onClick={abrirNuevo}>
-          <UserPlus size={16} />
-          Nuevo usuario
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+          <button type="button" className="btn btn-primary" onClick={abrirNuevo}>
+            <UserPlus size={16} />
+            Nuevo usuario
+          </button>
+          <button
+            className="btn"
+            type="button"
+            onClick={() => cargarUsuarios(pagina)}
+          >
+            <RefreshCcw size={16} />
+            Actualizar listado
+          </button>
+        </div>
       </header>
 
       {/* Alertas */}
@@ -584,10 +594,16 @@ export default function Usuarios() {
         </div>
       )}
 
-      {/* Filtros */}
-      <section className="catalog-filters">
-        <div className="filter-controls">
-          <div className="filter-search-box full-width-sm">
+      {/* Tabla de Usuarios */}
+      <section className="card">
+        <header className="card-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2>
+              <Users size={18} />
+              Usuarios del sistema ({totalItems})
+            </h2>
+          </div>
+          <div className="filter-search-box" style={{ maxWidth: '400px' }}>
             <Search size={14} className="filter-icon" />
             <input
               type="text"
@@ -599,35 +615,6 @@ export default function Usuarios() {
               }}
             />
           </div>
-          {busqueda && (
-            <button
-              type="button"
-              className="btn btn-sm btn-outline"
-              onClick={() => {
-                setBusqueda('');
-                setPagina(1);
-              }}
-            >
-              <X size={14} /> Limpiar búsqueda
-            </button>
-          )}
-        </div>
-      </section>
-
-      {/* Grilla de Usuarios */}
-      <section className="card">
-        <header className="card-head">
-          <h2>
-            <Users size={18} />
-            Usuarios del sistema ({totalItems})
-          </h2>
-          <button
-            className="btn btn-small"
-            type="button"
-            onClick={() => cargarUsuarios(pagina)}
-          >
-            Actualizar listado
-          </button>
         </header>
 
         {loading ? (
@@ -660,7 +647,7 @@ export default function Usuarios() {
                   const rolEtiqueta = infoRol(rolNombre).etiqueta;
 
                   return (
-                    <tr key={u.id} className="table-row-hover">
+                    <tr key={u.id} className="table-row-hover" style={{ height: '65px' }}>
                       <th scope="row" className="row-title">
                         <code>{u.userName}</code>
                       </th>
@@ -670,12 +657,12 @@ export default function Usuarios() {
                       <td>
                         <div className="contact-cell">
                           {u.email && (
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1" style={{ display: 'block', fontSize: '12px' }}>
                               <Mail size={12} /> {u.email}
                             </span>
                           )}
                           {u.phoneNumber && (
-                            <small className="muted flex items-center gap-1">
+                            <small className="flex items-center gap-1" style={{ display: 'block', fontSize: '12px' }}>
                               <Phone size={12} /> {u.phoneNumber}
                             </small>
                           )}
