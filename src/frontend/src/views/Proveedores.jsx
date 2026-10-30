@@ -240,24 +240,25 @@ export default function Proveedores() {
             Módulo de gestión de proveedores
           </p>
         </article>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={abrirNuevo}
+          >
+            <Plus size={16} />
+            Nuevo proveedor
+          </button>
 
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={abrirNuevo}
-        >
-          <Plus size={16} />
-          Nuevo proveedor
-        </button>
-
-        <button
-          className="btn"
-          type="button"
-          onClick={() => cargarProveedores(pagina)}
-        >
-          <RefreshCcw size={16} />
-          Actualizar listado
-        </button>
+          <button
+            className="btn"
+            type="button"
+            onClick={() => cargarProveedores(pagina)}
+          >
+            <RefreshCcw size={16} />
+            Actualizar listado
+          </button>
+        </div>
       </header>
 
       {/* Alertas */}
@@ -276,25 +277,7 @@ export default function Proveedores() {
         </div>
       )}
 
-      {/* Filtros */}
-      <section className="catalog-filters">
-        <div className="filter-controls">
-          {busqueda && (
-            <button
-              type="button"
-              className="btn btn-sm btn-outline"
-              onClick={() => {
-                setBusqueda('');
-                setPagina(1);
-              }}
-            >
-              <X size={14} /> Limpiar búsqueda
-            </button>
-          )}
-        </div>
-      </section>
-
-      {/* Listado de Proveedores */}
+      {/* Tabla de Proveedores */}
       <section className="card">
         <header className="card-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>

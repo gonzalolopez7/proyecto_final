@@ -503,7 +503,7 @@ export default function Productos() {
         </article>
 
         {pestanaActiva === 'productos' && (
-          <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
             <button type="button" className="btn btn-primary" onClick={abrirNuevoProducto}>
               <Plus size={16} />
               Nuevo producto
@@ -520,7 +520,7 @@ export default function Productos() {
         )}
 
         {pestanaActiva === 'categorias' && (
-          <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
             <button type="button" className="btn btn-primary" onClick={abrirNuevaCategoria}>
               <Plus size={16} />
               Nueva categoría
@@ -537,7 +537,7 @@ export default function Productos() {
         )}
 
         {pestanaActiva === 'atributos' && (
-          <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
             <button type="button" className="btn btn-primary" onClick={abrirNuevoAtributo}>
               <Plus size={16} />
               {tituloAtributoSingular === 'temporada' ? 'Nueva temporada' : `Nuevo ${tituloAtributoSingular}`}
@@ -671,7 +671,7 @@ export default function Productos() {
                 ))}
               </select>
 
-              {(busqueda || filtroCategoria || filtroGenero || filtroTemporada || filtroFit || filtroMaterial) && (
+              {(filtroCategoria || filtroGenero || filtroTemporada || filtroFit || filtroMaterial) && (
                 <button
                   type="button"
                   className="btn btn-small"
@@ -848,7 +848,7 @@ export default function Productos() {
               </h2>
             </div>
 
-            <div className="filter-search-box" style={{ maxWidth: '300px' }}>
+            <div className="filter-search-box" style={{ maxWidth: '400px' }}>
               <Search size={14} className="filter-icon" />
               <input
                 type="text"
@@ -932,7 +932,7 @@ export default function Productos() {
               </h2>
             </div>
 
-            <div className="filter-search-box" style={{ maxWidth: '280px' }}>
+            <div className="filter-search-box" style={{ maxWidth: '400px' }}>
               <Search size={14} className="filter-icon" />
               <input
                 type="text"
