@@ -230,14 +230,14 @@ export default function Proveedores() {
       setError(mensajeDeError(err, 'No se pudo eliminar el proveedor.'));
     }
   }
-const formatearCuit = (cuit) => {
-  if (!cuit) return 'Sin CUIT';
-  const soloNumeros = cuit.toString().replace(/\D/g, '');
-  if (soloNumeros.length === 11) {
-    return `${soloNumeros.slice(0, 2)}-${soloNumeros.slice(2, 10)}-${soloNumeros.slice(10)}`;
-  }
-  return cuit;
-};
+  const formatearCuit = (cuit) => {
+    if (!cuit) return 'Sin CUIT';
+    const soloNumeros = cuit.toString().replace(/\D/g, '');
+    if (soloNumeros.length === 11) {
+      return `${soloNumeros.slice(0, 2)}-${soloNumeros.slice(2, 10)}-${soloNumeros.slice(10)}`;
+    }
+    return cuit;
+  };
   return (
     <main className="view proveedores-view">
       <header className="page-head">
@@ -482,7 +482,7 @@ const formatearCuit = (cuit) => {
                 </label>
 
                 <label>
-                  Razón social fiscal *
+                  Razón social *
                   <input
                     type="text"
                     value={form.razonSocial}
@@ -536,7 +536,7 @@ const formatearCuit = (cuit) => {
                 </label>
 
                 <label>
-                  Email de contacto comercial
+                  Email de contacto
                   <input
                     type="email"
                     value={form.email}
@@ -547,12 +547,12 @@ const formatearCuit = (cuit) => {
               </div>
 
               <label>
-                Dirección comercial
+                Dirección
                 <input
                   type="text"
                   value={form.direccion}
                   onChange={(e) => setForm({ ...form, direccion: e.target.value })}
-                  placeholder="Calle número, localidad"
+                  placeholder="Calle, número, localidad..."
                 />
               </label>
 
