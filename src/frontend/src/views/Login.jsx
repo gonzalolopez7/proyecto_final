@@ -91,16 +91,16 @@ export default function Login() {
         {/* Texto de presentación */}
         <section className="lg-intro">
           <div className="lg-marca">
-            <div className="brand-badge-large">CS</div>
+            <div className="brand-badge-large">SGCS</div>
             <div>
-              <strong className="lg-marca-nombre">Compra&amp;Stock</strong>
+              <strong className="lg-marca-nombre">SGCS</strong>
               <span className="lg-marca-sub">Gestión textil mayorista</span>
             </div>
           </div>
 
           <h1 className="lg-titular">Cada talle y cada color, en su lugar.</h1>
           <p className="lg-bajada">
-            Comprá a tus proveedores, controlá el stock de cada variante y mantené las cuentas al día.
+            Comprá a tus proveedores, controlá el stock de cada producto y mantené las cuentas al día.
           </p>
 
           <div className="lg-variantes" aria-hidden="true">
@@ -116,7 +116,7 @@ export default function Login() {
             </div>
           </div>
 
-          <small className="lg-pie">Proyecto final de carrera, UNT FACET 2026</small>
+          <small className="lg-pie">Proyecto Final - FACET UNT 2026</small>
         </section>
 
         {/* Formulario: una etiqueta de prenda que cuelga de la barra */}
@@ -126,14 +126,12 @@ export default function Login() {
             <span className="lg-agujero" aria-hidden="true" />
 
             <header className="login-header">
-              <span className="eyebrow">Acceso del personal</span>
               <h2>Iniciar sesión</h2>
-              <p>Ingresá para ver el stock, cargar compras y revisar las cuentas.</p>
             </header>
 
             <form onSubmit={handleSubmit} className="auth-form" noValidate>
               <div className="form-field">
-                <label htmlFor="identificador">Usuario o correo electrónico</label>
+                <label htmlFor="identificador">Usuario</label>
                 <div className="input-icon-wrapper">
                   <User size={18} className="field-icon" />
                   <input
@@ -142,7 +140,7 @@ export default function Login() {
                     type="text"
                     value={form.identificador}
                     onChange={cambiarCampo}
-                    placeholder="ej. admin o usuario@empresa.com"
+                    placeholder="Ingresá tu nombre de usuario"
                     autoComplete="username"
                     required
                     disabled={loading}
