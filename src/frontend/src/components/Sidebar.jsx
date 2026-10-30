@@ -1,9 +1,9 @@
-import { 
-  LayoutDashboard, 
-  Truck, 
-  Users, 
+import {
+  LayoutDashboard,
+  Truck,
+  Users,
   Shirt,
-  X 
+  X
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { obtenerSesion } from '../services/authService';
@@ -64,10 +64,9 @@ export default function Sidebar({ menuAbierto, setMenuAbierto }) {
     <aside className={`sidebar ${menuAbierto ? 'open' : ''}`}>
       <header className="sidebar-header">
         <div className="sidebar-brand">
-          <div className="brand-badge">CS</div>
+          <div className="brand-badge">SGCS</div>
           <div>
-            <strong className="brand-title">Compra&Stock</strong>
-            <span className="brand-subtitle">Gestión textil</span>
+            <span className="brand-subtitle">Gestión textil mayorista</span>
           </div>
         </div>
         <button type="button" className="sidebar-close" onClick={cerrarMenu} aria-label="Cerrar menú">
