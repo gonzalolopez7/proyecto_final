@@ -2,9 +2,9 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SGCS.Application.Common.Interfaces;
+using SGCS.Application.Common.Validation;
 using SGCS.Application.Common.Models;
 using SGCS.Domain.Entities;
-
 namespace SGCS.Application.Features.Proveedores.Commands;
 
 public record CreateProveedorCommand(
@@ -37,8 +37,13 @@ public class CreateProveedorCommandValidator : AbstractValidator<CreateProveedor
         RuleFor(x => x.Cuit)
             .NotEmpty()
             .WithMessage("El CUIT es obligatorio.")
-            .MaximumLength(20)
-            .WithMessage("El CUIT no debe superar los 20 caracteres.");
+            .Length(11)
+            .WithMessage("El CUIT debe tener exactamente 11 caracteres.")
+            .Matches(@"^\d{11}$")
+            .WithMessage("El CUIT debe contener únicamente números (sin guiones).")
+            .Must(CuitHelper.IsValidCuit)
+            .WithMessage("El CUIT ingresado no es válido.");
+            ;
 
         RuleFor(x => x.Telefono)
             .Length(10)
