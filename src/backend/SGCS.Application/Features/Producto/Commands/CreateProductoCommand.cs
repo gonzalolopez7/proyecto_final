@@ -11,6 +11,7 @@ public record CreateProductoCommand(
     string Nombre,
     string Descripcion,
     string IdCategoria,
+    string IdEscalaTalle,
     string? IdGenero,
     string? IdTemporada,
     string? IdFit,
@@ -38,6 +39,12 @@ public class CreateProductoCommandValidator : AbstractValidator<CreateProductoCo
             .WithMessage("La categoría es obligatoria.")
             .MaximumLength(36)
             .WithMessage("El ID de categoría no debe superar los 36 caracteres.");
+
+        RuleFor(x => x.IdEscalaTalle)
+            .NotEmpty()
+            .WithMessage("La escala de talle es obligatoria.")
+            .MaximumLength(36)
+            .WithMessage("El ID de escala de talle no debe superar los 36 caracteres.");
 
         RuleFor(x => x.IdGenero)
             .MaximumLength(36)
@@ -97,7 +104,14 @@ public class CreateProductoCommandHandler : IRequestHandler<CreateProductoComman
         if (hasChildren)
             return Result<string>.Failure(ProductoErrors.CategoriaNotLeaf(request.IdCategoria));
 
-        // 3. Verificar existencia de atributos opcionales
+        // 3. Verificar existencia de escala de talle
+        var escalaTalleExists = await _context.EscalasTalles
+            .AnyAsync(e => e.Id == request.IdEscalaTalle, cancellationToken);
+
+        if (!escalaTalleExists)
+            return Result<string>.Failure(ProductoErrors.EscalaTalleNotFound(request.IdEscalaTalle));
+
+        // 4. Verificar existencia de atributos opcionales
         if (!string.IsNullOrEmpty(request.IdGenero))
         {
             var generoExists = await _context.Generos.AnyAsync(g => g.Id == request.IdGenero, cancellationToken);
@@ -126,12 +140,13 @@ public class CreateProductoCommandHandler : IRequestHandler<CreateProductoComman
                 return Result<string>.Failure(ProductoErrors.MaterialNotFound(request.IdMaterial));
         }
 
-        // 4. Crear la entidad Producto
+        // 5. Crear la entidad Producto
         var producto = new Producto
         {
             Nombre = request.Nombre,
             Descripcion = request.Descripcion,
             IdCategoria = request.IdCategoria,
+            IdEscalaTalle = request.IdEscalaTalle,
             IdGenero = request.IdGenero,
             IdTemporada = request.IdTemporada,
             IdFit = request.IdFit,

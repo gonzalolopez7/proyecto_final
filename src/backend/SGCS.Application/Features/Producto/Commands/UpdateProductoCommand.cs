@@ -10,6 +10,7 @@ public record UpdateProductoRequest(
     string Nombre,
     string Descripcion,
     string IdCategoria,
+    string IdEscalaTalle,
     string? IdGenero,
     string? IdTemporada,
     string? IdFit,
@@ -21,6 +22,7 @@ public record UpdateProductoCommand(
     string Nombre,
     string Descripcion,
     string IdCategoria,
+    string IdEscalaTalle,
     string? IdGenero,
     string? IdTemporada,
     string? IdFit,
@@ -54,6 +56,12 @@ public class UpdateProductoCommandValidator : AbstractValidator<UpdateProductoCo
             .WithMessage("La categoría es obligatoria.")
             .MaximumLength(36)
             .WithMessage("El ID de categoría no debe superar los 36 caracteres.");
+
+        RuleFor(x => x.IdEscalaTalle)
+            .NotEmpty()
+            .WithMessage("La escala de talle es obligatoria.")
+            .MaximumLength(36)
+            .WithMessage("El ID de escala de talle no debe superar los 36 caracteres.");
 
         RuleFor(x => x.IdGenero)
             .MaximumLength(36)
@@ -127,7 +135,17 @@ public class UpdateProductoCommandHandler : IRequestHandler<UpdateProductoComman
         if (hasChildren)
             return Result.Failure(ProductoErrors.CategoriaNotLeaf(request.IdCategoria));
 
-        // 4. Validar existencia de atributos si cambiaron o se especificaron
+        // 4. Validar existencia de escala de talle si cambió
+        if (producto.IdEscalaTalle != request.IdEscalaTalle)
+        {
+            var escalaTalleExists = await _context.EscalasTalles
+                .AnyAsync(e => e.Id == request.IdEscalaTalle, cancellationToken);
+
+            if (!escalaTalleExists)
+                return Result.Failure(ProductoErrors.EscalaTalleNotFound(request.IdEscalaTalle));
+        }
+
+        // 5. Validar existencia de atributos si cambiaron o se especificaron
         if (!string.IsNullOrEmpty(request.IdGenero) && producto.IdGenero != request.IdGenero)
         {
             var generoExists = await _context.Generos.AnyAsync(g => g.Id == request.IdGenero, cancellationToken);
@@ -156,10 +174,11 @@ public class UpdateProductoCommandHandler : IRequestHandler<UpdateProductoComman
                 return Result.Failure(ProductoErrors.MaterialNotFound(request.IdMaterial));
         }
 
-        // 5. Actualizar propiedades
+        // 6. Actualizar propiedades
         producto.Nombre = request.Nombre;
         producto.Descripcion = request.Descripcion;
         producto.IdCategoria = request.IdCategoria;
+        producto.IdEscalaTalle = request.IdEscalaTalle;
         producto.IdGenero = request.IdGenero;
         producto.IdTemporada = request.IdTemporada;
         producto.IdFit = request.IdFit;

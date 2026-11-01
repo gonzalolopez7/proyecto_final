@@ -6,6 +6,8 @@ public record ProductoDto(
     string Descripcion,
     string IdCategoria,
     string? CategoriaNombre,
+    string IdEscalaTalle,
+    string? EscalaTalleNombre,
     string? IdGenero,
     string? GeneroNombre,
     string? IdTemporada,

@@ -47,6 +47,8 @@ public class GetProductoByNameQueryHandler : IRequestHandler<GetProductoByNameQu
             producto.Descripcion,
             producto.IdCategoria,
             producto.Categoria != null ? producto.Categoria.Nombre : null,
+            producto.IdEscalaTalle,
+            producto.EscalaTalle != null ? producto.EscalaTalle.Nombre : null,
             producto.IdGenero,
             producto.Genero != null ? producto.Genero.Nombre : null,
             producto.IdTemporada,

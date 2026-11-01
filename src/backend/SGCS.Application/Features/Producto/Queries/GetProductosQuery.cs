@@ -79,6 +79,8 @@ public class GetProductosQueryHandler : IRequestHandler<GetProductosQuery, Pagin
                 p.Descripcion,
                 p.IdCategoria,
                 p.Categoria != null ? p.Categoria.Nombre : null,
+                p.IdEscalaTalle,
+                p.EscalaTalle != null ? p.EscalaTalle.Nombre : null,
                 p.IdGenero,
                 p.Genero != null ? p.Genero.Nombre : null,
                 p.IdTemporada,

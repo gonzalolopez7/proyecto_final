@@ -44,6 +44,11 @@ public static class ProductoErrors
             "Producto.CategoriaNotLeaf",
             $"No se puede asignar la categoría con ID '{categoriaId}' porque no es una categoría hoja (contiene subcategorías).");
 
+    public static Error EscalaTalleNotFound(string escalaTalleId) =>
+        Error.NotFound(
+            "Producto.EscalaTalleNotFound",
+            $"No se encontró la escala de talle con ID '{escalaTalleId}'.");
+
     public static Error GeneroNotFound(string generoId) =>
         Error.NotFound(
             "Producto.GeneroNotFound",
