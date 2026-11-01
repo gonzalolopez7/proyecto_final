@@ -135,6 +135,57 @@ namespace SGCS.Infrastructure.Migrations
                     b.ToTable("Categorias");
                 });
 
+            modelBuilder.Entity("SGCS.Domain.Entities.Color", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("CodigoHex")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Colores");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.EscalaTalle", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("EscalasTalles");
+                });
+
             modelBuilder.Entity("SGCS.Domain.Entities.Fit", b =>
                 {
                     b.Property<string>("Id")
@@ -202,8 +253,8 @@ namespace SGCS.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DeletedBy")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
 
                     b.Property<string>("Descripcion")
                         .IsRequired()
@@ -211,6 +262,11 @@ namespace SGCS.Infrastructure.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<string>("IdCategoria")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdEscalaTalle")
                         .IsRequired()
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
@@ -244,6 +300,8 @@ namespace SGCS.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("IdCategoria");
+
+                    b.HasIndex("IdEscalaTalle");
 
                     b.HasIndex("IdFit");
 
@@ -320,6 +378,33 @@ namespace SGCS.Infrastructure.Migrations
                     b.ToTable("Proveedores");
                 });
 
+            modelBuilder.Entity("SGCS.Domain.Entities.Talle", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdEscalaTalle")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdEscalaTalle", "Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Talles");
+                });
+
             modelBuilder.Entity("SGCS.Domain.Entities.Temporada", b =>
                 {
                     b.Property<string>("Id")
@@ -337,6 +422,62 @@ namespace SGCS.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Temporadas");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Variante", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdColor")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdProducto")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdTalle")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("StockMinimo")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdColor");
+
+                    b.HasIndex("IdTalle");
+
+                    b.HasIndex("Sku")
+                        .IsUnique();
+
+                    b.HasIndex("IdProducto", "IdTalle", "IdColor")
+                        .IsUnique();
+
+                    b.ToTable("Variantes");
                 });
 
             modelBuilder.Entity("SGCS.Infrastructure.Identity.ApplicationRole", b =>
@@ -533,6 +674,12 @@ namespace SGCS.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SGCS.Domain.Entities.EscalaTalle", "EscalaTalle")
+                        .WithMany()
+                        .HasForeignKey("IdEscalaTalle")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SGCS.Domain.Entities.Fit", "Fit")
                         .WithMany()
                         .HasForeignKey("IdFit")
@@ -555,6 +702,8 @@ namespace SGCS.Infrastructure.Migrations
 
                     b.Navigation("Categoria");
 
+                    b.Navigation("EscalaTalle");
+
                     b.Navigation("Fit");
 
                     b.Navigation("Genero");
@@ -562,6 +711,44 @@ namespace SGCS.Infrastructure.Migrations
                     b.Navigation("Material");
 
                     b.Navigation("Temporada");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Talle", b =>
+                {
+                    b.HasOne("SGCS.Domain.Entities.EscalaTalle", "EscalaTalle")
+                        .WithMany()
+                        .HasForeignKey("IdEscalaTalle")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EscalaTalle");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Variante", b =>
+                {
+                    b.HasOne("SGCS.Domain.Entities.Color", "Color")
+                        .WithMany()
+                        .HasForeignKey("IdColor")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SGCS.Domain.Entities.Producto", "Producto")
+                        .WithMany()
+                        .HasForeignKey("IdProducto")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SGCS.Domain.Entities.Talle", "Talle")
+                        .WithMany()
+                        .HasForeignKey("IdTalle")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Color");
+
+                    b.Navigation("Producto");
+
+                    b.Navigation("Talle");
                 });
 
             modelBuilder.Entity("SGCS.Infrastructure.Identity.ApplicationUserRole", b =>

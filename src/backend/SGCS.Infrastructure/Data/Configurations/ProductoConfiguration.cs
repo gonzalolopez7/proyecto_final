@@ -8,11 +8,11 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
 {
     public void Configure(EntityTypeBuilder<Producto> builder)
     {
+        // 1. Clave Primaria
         builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).HasMaxLength(36);
 
-        builder.Property(p => p.Id)
-            .HasMaxLength(36);
-
+        // 2. Propiedades de Dominio
         builder.Property(p => p.Nombre)
             .IsRequired()
             .HasMaxLength(200);
@@ -22,6 +22,10 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
             .HasMaxLength(500);
 
         builder.Property(p => p.IdCategoria)
+            .IsRequired()
+            .HasMaxLength(36);
+
+        builder.Property(p => p.IdEscalaTalle)
             .IsRequired()
             .HasMaxLength(36);
 
@@ -37,20 +41,26 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
         builder.Property(p => p.IdMaterial)
             .HasMaxLength(36);
 
+        // 3. Soft Delete
         builder.Property(p => p.IsDeleted)
             .HasDefaultValue(false);
 
         builder.Property(p => p.DeletedBy)
-            .HasMaxLength(256);
+            .HasMaxLength(36);
 
-        // Índice único en Nombre
+        // 4. Índices
         builder.HasIndex(p => p.Nombre)
             .IsUnique();
 
-        // Relaciones
+        // 5. Relaciones
         builder.HasOne(p => p.Categoria)
             .WithMany()
             .HasForeignKey(p => p.IdCategoria)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(p => p.EscalaTalle)
+            .WithMany()
+            .HasForeignKey(p => p.IdEscalaTalle)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(p => p.Genero)
