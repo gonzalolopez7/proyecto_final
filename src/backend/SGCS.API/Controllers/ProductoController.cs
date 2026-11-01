@@ -67,6 +67,7 @@ public class ProductoController : ControllerBase
             request.Nombre,
             request.Descripcion,
             request.IdCategoria,
+            request.IdEscalaTalle,
             request.IdGenero,
             request.IdTemporada,
             request.IdFit,
