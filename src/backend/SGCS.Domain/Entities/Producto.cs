@@ -9,6 +9,8 @@ public class Producto : ISoftDeletableEntity
     public string Id { get; private set; }
     public required string IdCategoria { get; set; }
     public Categoria? Categoria { get; set; }
+    public required string IdEscalaTalle { get; set; }
+    public EscalaTalle? EscalaTalle { get; set; }
     public required string Nombre { get; set; }
     public required string Descripcion { get; set; }
     public string? IdGenero { get; set; }
