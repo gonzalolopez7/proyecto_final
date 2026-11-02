@@ -1,16 +1,14 @@
-import { useState, useCallback } from 'react';
-import { ROLES_DISPONIBLES } from '../services/usuarioService';
+import { useCallback } from 'react';
+import { ROLES_DISPONIBLES, obtenerInfoRol } from '../config/permisos';
 
 export default function useRoles() {
-  const [roles, setRoles] = useState(ROLES_DISPONIBLES);
-  const [cargando, setCargando] = useState(false);
-  const [error] = useState('');
+  const recargar = useCallback(() => {}, []);
 
-  const recargar = useCallback(() => {
-    setCargando(true);
-    setRoles(ROLES_DISPONIBLES);
-    setCargando(false);
-  }, []);
-
-  return { roles, cargando, error, recargar };
+  return {
+    roles: ROLES_DISPONIBLES,
+    obtenerInfoRol,
+    cargando: false,
+    error: '',
+    recargar,
+  };
 }

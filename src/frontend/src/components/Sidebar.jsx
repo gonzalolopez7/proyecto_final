@@ -3,11 +3,11 @@ import {
   Truck,
   Users,
   Shirt,
-  X
+  X,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { obtenerSesion } from '../services/authService';
-import { PERMISOS } from '../config/permisos';
+import { PERMISOS, tienePermiso, obtenerInfoRol } from '../config/permisos';
 
 const GRUPOS_NAVEGACION = [
   {
@@ -26,42 +26,13 @@ const GRUPOS_NAVEGACION = [
   },
 ];
 
-function coincideRol(rolUsuario, rolesPermitidos) {
-  if (!rolesPermitidos || rolesPermitidos.length === 0) return true;
-  if (!rolUsuario) return false;
-
-  const normalizar = (r) => String(r).trim().toLowerCase().replace(/[\s_-]/g, '');
-  const rolNorm = normalizar(rolUsuario);
-
-  return rolesPermitidos.some((r) => {
-    const pNorm = normalizar(r);
-    return (
-      rolNorm === pNorm ||
-      (rolNorm === 'admin' && pNorm === 'administrador') ||
-      (rolNorm === 'administrador' && pNorm === 'admin')
-    );
-  });
-}
-
-const NOMBRES_ROLES = {
-  admin: 'Administrador',
-  administrador: 'Administrador',
-  encargado: 'Encargado',
-  comprador: 'Comprador',
-  operadorinventario: 'Operador de inventario',
-  operadorlogistica: 'Operador de logística',
-};
-
 export default function Sidebar({ menuAbierto, setMenuAbierto }) {
   const rol = obtenerSesion()?.user?.role;
+  const rolEtiqueta = obtenerInfoRol(rol).etiqueta;
   const cerrarMenu = () => setMenuAbierto(false);
 
-  const rolEtiqueta = rol
-    ? NOMBRES_ROLES[rol.toLowerCase().replace(/[\s_-]/g, '')] || rol
-    : 'Usuario';
-
   return (
-    <aside className={`sidebar ${menuAbierto ? 'open' : ''}`}>
+    <aside className={`sidebar${menuAbierto ? ' open' : ''}`}>
       <header className="sidebar-header">
         <div className="sidebar-brand">
           <div className="brand-badge">SGCS</div>
@@ -76,8 +47,8 @@ export default function Sidebar({ menuAbierto, setMenuAbierto }) {
 
       <nav className="sidebar-nav" aria-label="Navegación principal">
         {GRUPOS_NAVEGACION.map((grupo) => {
-          const enlacesVisibles = grupo.enlaces.filter(
-            ({ roles }) => coincideRol(rol, roles)
+          const enlacesVisibles = grupo.enlaces.filter(({ roles }) =>
+            tienePermiso(rol, roles)
           );
 
           if (enlacesVisibles.length === 0) return null;
@@ -86,7 +57,12 @@ export default function Sidebar({ menuAbierto, setMenuAbierto }) {
             <div key={grupo.titulo} className="nav-group">
               <span className="nav-group-title">{grupo.titulo}</span>
               {enlacesVisibles.map(({ to, texto, Icono }) => (
-                <NavLink key={to} to={to} onClick={cerrarMenu} className={({ isActive }) => (isActive ? 'active' : '')}>
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={cerrarMenu}
+                  className={({ isActive }) => (isActive ? 'active' : '')}
+                >
                   <Icono size={18} />
                   <span>{texto}</span>
                 </NavLink>

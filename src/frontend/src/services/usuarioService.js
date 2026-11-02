@@ -4,36 +4,11 @@ import api, {
   armarParametrosPaginados,
   normalizarRespuestaPaginada,
 } from './api';
+import { ROLES_DISPONIBLES, obtenerInfoRol } from '../config/permisos';
+
+export { ROLES_DISPONIBLES, obtenerInfoRol };
 
 const ENDPOINT = '/api/User';
-
-export const ROLES_DISPONIBLES = [
-  { id: 'Admin', nombre: 'Admin', etiqueta: 'Administrador', detalle: 'Acceso completo al sistema y gestión de usuarios' },
-  { id: 'Encargado', nombre: 'Encargado', etiqueta: 'Encargado', detalle: 'Gestión operativa, compras y proveedores' },
-  { id: 'Comprador', nombre: 'Comprador', etiqueta: 'Comprador', detalle: 'Gestión de órdenes de compra y proveedores' },
-  { id: 'OperadorInventario', nombre: 'OperadorInventario', etiqueta: 'Operador de inventario', detalle: 'Catálogo de productos y conteos de stock' },
-  { id: 'OperadorLogistica', nombre: 'OperadorLogistica', etiqueta: 'Operador de logística', detalle: 'Movimientos de stock y ubicaciones' },
-];
-
-/**
- * Obtiene la etiqueta legible y detalle descriptivo de un rol a partir de su identificador.
- */
-export function obtenerInfoRol(nombre = '') {
-  if (!nombre) return { etiqueta: 'Usuario', detalle: '' };
-  const normalizar = (str) =>
-    String(str)
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f\s_-]/g, '')
-      .toLowerCase();
-
-  const clave = normalizar(nombre);
-  if (clave === 'administrador') {
-    return ROLES_DISPONIBLES[0];
-  }
-
-  const encontrado = ROLES_DISPONIBLES.find((r) => normalizar(r.id) === clave);
-  return encontrado || { id: nombre, nombre, etiqueta: nombre, detalle: '' };
-}
 
 function armarPayloadUsuario(usuario = {}) {
   return {
