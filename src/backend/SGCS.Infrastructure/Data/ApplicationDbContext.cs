@@ -45,6 +45,7 @@ public class ApplicationDbContext : IdentityDbContext<
     public DbSet<Fit> Fits => Set<Fit>();
     public DbSet<Material> Materiales => Set<Material>();
     public DbSet<Variante> Variantes => Set<Variante>();
+    public DbSet<VarianteProveedor> VariantesProveedores => Set<VarianteProveedor>();
     public DbSet<EscalaTalle> EscalasTalles => Set<EscalaTalle>();
     public DbSet<Talle> Talles => Set<Talle>();
     public DbSet<Color> Colores => Set<Color>();

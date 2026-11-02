@@ -481,6 +481,42 @@ namespace SGCS.Infrastructure.Migrations
                     b.ToTable("Variantes");
                 });
 
+            modelBuilder.Entity("SGCS.Domain.Entities.VarianteProveedor", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("CodigoProveedor")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("Costo")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("IdProveedor")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdVariante")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdProveedor", "CodigoProveedor")
+                        .IsUnique();
+
+                    b.HasIndex("IdVariante", "IdProveedor")
+                        .IsUnique();
+
+                    b.ToTable("VariantesProveedores");
+                });
+
             modelBuilder.Entity("SGCS.Infrastructure.Identity.ApplicationRole", b =>
                 {
                     b.Property<string>("Id")
@@ -750,6 +786,25 @@ namespace SGCS.Infrastructure.Migrations
                     b.Navigation("Producto");
 
                     b.Navigation("Talle");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.VarianteProveedor", b =>
+                {
+                    b.HasOne("SGCS.Domain.Entities.Proveedor", "Proveedor")
+                        .WithMany()
+                        .HasForeignKey("IdProveedor")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SGCS.Domain.Entities.Variante", "Variante")
+                        .WithMany()
+                        .HasForeignKey("IdVariante")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Proveedor");
+
+                    b.Navigation("Variante");
                 });
 
             modelBuilder.Entity("SGCS.Infrastructure.Identity.ApplicationUserRole", b =>

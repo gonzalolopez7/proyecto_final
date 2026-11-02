@@ -16,6 +16,7 @@ public interface IApplicationDbContext
     DbSet<Fit> Fits { get; }
     DbSet<Material> Materiales { get; }
     DbSet<Variante> Variantes { get; }
+    DbSet<VarianteProveedor> VariantesProveedores { get; }
     DbSet<EscalaTalle> EscalasTalles { get; }
     DbSet<Talle> Talles { get; }
     DbSet<Color> Colores { get; }
