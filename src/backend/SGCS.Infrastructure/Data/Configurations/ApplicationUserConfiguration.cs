@@ -8,6 +8,7 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
 {
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
+        // 2. Propiedades de Dominio
         builder.Property(u => u.FirstName)
             .IsRequired()
             .HasMaxLength(100);
@@ -16,9 +17,11 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             .IsRequired()
             .HasMaxLength(100);
 
+        // 3. Soft Delete
         builder.Property(u => u.IsDeleted)
             .HasDefaultValue(false);
 
+        // 4. Índices
         builder.HasIndex(u => u.NormalizedEmail)
             .HasDatabaseName("EmailIndex")
             .IsUnique()
