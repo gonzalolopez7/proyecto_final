@@ -8,6 +8,9 @@ import {
   X,
   FolderTree,
   Tags,
+  Layers,
+  Ruler,
+  Palette,
   RotateCcw,
   RefreshCcw,
 } from 'lucide-react';
@@ -30,15 +33,24 @@ import {
   obtenerTemporadas,
   obtenerFits,
   obtenerMateriales,
+  obtenerColores,
+  altaColor,
+  modificarColor,
+  eliminarColor,
+  obtenerEscalasTalle,
+  obtenerTallesPorEscala,
 } from '../services/atributoService';
 import { mensajeDeError, codigoDeError, datosDeError } from '../services/errores';
+import { expandirHexColor, resumirTallesEscala } from '../utils/validaciones';
 import AlertBanner from '../components/AlertBanner';
 import PaginationBar from '../components/PaginationBar';
+import VariantesProductoModal from '../components/VariantesProductoModal';
 
 const PRODUCTO_INICIAL = {
   nombre: '',
   descripcion: '',
   idCategoria: '',
+  idEscalaTalle: '',
   idGenero: '',
   idTemporada: '',
   idFit: '',
@@ -52,6 +64,12 @@ const CATEGORIA_INICIAL = {
 
 const ATRIBUTO_INICIAL = {
   nombre: '',
+};
+
+const COLOR_INICIAL = {
+  nombre: '',
+  codigo: '',
+  codigoHex: '#1B3A5C',
 };
 
 const META_ATRIBUTO = {
@@ -83,6 +101,20 @@ const META_ATRIBUTO = {
     campoLabel: 'Nombre del material',
     placeholder: 'Ej. Algodón 100%, Lino, Denim...',
   },
+  colores: {
+    singular: 'color',
+    plural: 'Colores',
+    nuevoLabel: 'Nuevo color',
+    campoLabel: 'Nombre del color',
+    placeholder: 'Ej. Azul Marino, Negro, Blanco...',
+  },
+  escalas: {
+    singular: 'escala de talle',
+    plural: 'Escalas de talle',
+    nuevoLabel: '',
+    campoLabel: '',
+    placeholder: '',
+  },
 };
 
 const TAMANO_PAGINA = 12;
@@ -93,11 +125,12 @@ export default function Productos() {
   const [error, setError] = useState('');
 
   // ==========================================
-  // ESTADOS: PRODUCTOS
+  // ESTADOS: PRODUCTOS Y VARIANTES
   // ==========================================
   const [productos, setProductos] = useState([]);
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [productoRestaurable, setProductoRestaurable] = useState(null);
+  const [productoVariantesActivo, setProductoVariantesActivo] = useState(null);
 
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
@@ -127,13 +160,16 @@ export default function Productos() {
   const [formCategoria, setFormCategoria] = useState(CATEGORIA_INICIAL);
 
   // ==========================================
-  // ESTADOS: ATRIBUTOS (GÉNERO, TEMPORADA, FIT, MATERIAL)
+  // ESTADOS: ATRIBUTOS, COLORES Y ESCALAS
   // ==========================================
   const [tipoAtributo, setTipoAtributo] = useState('generos');
   const [generos, setGeneros] = useState([]);
   const [temporadas, setTemporadas] = useState([]);
   const [fits, setFits] = useState([]);
   const [materiales, setMateriales] = useState([]);
+  const [colores, setColores] = useState([]);
+  const [escalasTalle, setEscalasTalle] = useState([]);
+  const [tallesPorEscala, setTallesPorEscala] = useState({});
   const [busquedaAtributo, setBusquedaAtributo] = useState('');
 
   const [modalAtributoAbierto, setModalAtributoAbierto] = useState(false);
@@ -141,27 +177,51 @@ export default function Productos() {
   const [guardandoAtributo, setGuardandoAtributo] = useState(false);
   const [formAtributo, setFormAtributo] = useState(ATRIBUTO_INICIAL);
 
+  const [modalColorAbierto, setModalColorAbierto] = useState(false);
+  const [editandoColorId, setEditandoColorId] = useState(null);
+  const [guardandoColor, setGuardandoColor] = useState(false);
+  const [formColor, setFormColor] = useState(COLOR_INICIAL);
+
   // ==========================================
   // CARGAS DE DATOS
   // ==========================================
+  const cargarTallesDeEscalas = useCallback(async (listaEscalas = []) => {
+    try {
+      const pares = await Promise.all(
+        listaEscalas.map(async (esc) => {
+          const talles = await obtenerTallesPorEscala(esc.id);
+          return [esc.id, talles];
+        })
+      );
+      setTallesPorEscala(Object.fromEntries(pares));
+    } catch (err) {
+      console.error('Error al cargar talles de las escalas:', err);
+    }
+  }, []);
+
   const cargarCatalogosMaestros = useCallback(async () => {
     try {
-      const [cats, gens, temps, fts, mats] = await Promise.all([
+      const [cats, gens, temps, fts, mats, cols, escs] = await Promise.all([
         obtenerCategorias(),
         obtenerGeneros(),
         obtenerTemporadas(),
         obtenerFits(),
         obtenerMateriales(),
+        obtenerColores(),
+        obtenerEscalasTalle(),
       ]);
       setCategorias(cats);
       setGeneros(gens);
       setTemporadas(temps);
       setFits(fts);
       setMateriales(mats);
+      setColores(cols);
+      setEscalasTalle(escs);
+      await cargarTallesDeEscalas(escs);
     } catch (err) {
       console.error('Error al cargar catálogos auxiliares:', err);
     }
-  }, []);
+  }, [cargarTallesDeEscalas]);
 
   const cargarProductos = useCallback(async (pag = 1) => {
     try {
@@ -196,12 +256,14 @@ export default function Productos() {
 
     async function inicializarCatalogos() {
       try {
-        const [cats, gens, temps, fts, mats] = await Promise.all([
+        const [cats, gens, temps, fts, mats, cols, escs] = await Promise.all([
           obtenerCategorias(),
           obtenerGeneros(),
           obtenerTemporadas(),
           obtenerFits(),
           obtenerMateriales(),
+          obtenerColores(),
+          obtenerEscalasTalle(),
         ]);
         if (!activo) return;
         setCategorias(cats);
@@ -209,6 +271,17 @@ export default function Productos() {
         setTemporadas(temps);
         setFits(fts);
         setMateriales(mats);
+        setColores(cols);
+        setEscalasTalle(escs);
+
+        const pares = await Promise.all(
+          escs.map(async (esc) => {
+            const talles = await obtenerTallesPorEscala(esc.id);
+            return [esc.id, talles];
+          })
+        );
+        if (!activo) return;
+        setTallesPorEscala(Object.fromEntries(pares));
       } catch (err) {
         console.error('Error al cargar catálogos auxiliares:', err);
       }
@@ -265,9 +338,11 @@ export default function Productos() {
   function abrirNuevoProducto() {
     setEditandoProductoId(null);
     const primerHoja = categorias.find((c) => !categorias.some((sub) => sub.idPadre === c.id));
+    const primeraEscala = escalasTalle[0];
     setFormProducto({
       ...PRODUCTO_INICIAL,
       idCategoria: primerHoja ? primerHoja.id : '',
+      idEscalaTalle: primeraEscala ? primeraEscala.id : '',
     });
     setProductoRestaurable(null);
     setError('');
@@ -280,6 +355,7 @@ export default function Productos() {
       nombre: prod.nombre || '',
       descripcion: prod.descripcion || '',
       idCategoria: prod.idCategoria || '',
+      idEscalaTalle: prod.idEscalaTalle || '',
       idGenero: prod.idGenero || '',
       idTemporada: prod.idTemporada || '',
       idFit: prod.idFit || '',
@@ -302,6 +378,10 @@ export default function Productos() {
     }
     if (!formProducto.idCategoria) {
       setError('Debe seleccionar una categoría para el producto.');
+      return;
+    }
+    if (!formProducto.idEscalaTalle) {
+      setError('Debe seleccionar una escala de talles para el producto.');
       return;
     }
 
@@ -442,7 +522,7 @@ export default function Productos() {
   }, [categorias, busquedaCategoria]);
 
   // ==========================================
-  // ACCIONES: ATRIBUTOS
+  // ACCIONES: ATRIBUTOS, COLORES Y ESCALAS
   // ==========================================
   const metaAtributo = META_ATRIBUTO[tipoAtributo] || META_ATRIBUTO.generos;
 
@@ -452,14 +532,20 @@ export default function Productos() {
       case 'temporadas': return temporadas;
       case 'fits': return fits;
       case 'materiales': return materiales;
+      case 'colores': return colores;
+      case 'escalas': return escalasTalle;
       default: return [];
     }
-  }, [tipoAtributo, generos, temporadas, fits, materiales]);
+  }, [tipoAtributo, generos, temporadas, fits, materiales, colores, escalasTalle]);
 
   const atributosFiltrados = useMemo(() => {
     if (!busquedaAtributo.trim()) return listaAtributosActual;
     const txt = busquedaAtributo.toLowerCase();
-    return listaAtributosActual.filter((a) => a.nombre?.toLowerCase().includes(txt));
+    return listaAtributosActual.filter(
+      (a) =>
+        a.nombre?.toLowerCase().includes(txt) ||
+        a.codigo?.toLowerCase().includes(txt)
+    );
   }, [listaAtributosActual, busquedaAtributo]);
 
   async function recargarAtributoActual(tipo) {
@@ -473,6 +559,14 @@ export default function Productos() {
   }
 
   function abrirNuevoAtributo() {
+    if (tipoAtributo === 'colores') {
+      setEditandoColorId(null);
+      setFormColor(COLOR_INICIAL);
+      setError('');
+      setModalColorAbierto(true);
+      return;
+    }
+
     setEditandoAtributoId(null);
     setFormAtributo(ATRIBUTO_INICIAL);
     setError('');
@@ -480,6 +574,18 @@ export default function Productos() {
   }
 
   function abrirEditarAtributo(item) {
+    if (tipoAtributo === 'colores') {
+      setEditandoColorId(item.id);
+      setFormColor({
+        nombre: item.nombre || '',
+        codigo: item.codigo || '',
+        codigoHex: expandirHexColor(item.codigoHex),
+      });
+      setError('');
+      setModalColorAbierto(true);
+      return;
+    }
+
     setEditandoAtributoId(item.id);
     setFormAtributo({ nombre: item.nombre || '' });
     setError('');
@@ -520,6 +626,20 @@ export default function Productos() {
 
   async function handleEliminarAtributo(id, nombre) {
     if (!window.confirm(`¿Seguro que desea eliminar "${nombre}"?`)) return;
+
+    if (tipoAtributo === 'colores') {
+      try {
+        setError('');
+        await eliminarColor(id);
+        setColores(await obtenerColores());
+        setMensaje(`Color "${nombre}" eliminado correctamente.`);
+      } catch (err) {
+        console.error(err);
+        setError(mensajeDeError(err, 'No se pudo eliminar el color.'));
+      }
+      return;
+    }
+
     const servicio = SERVICIOS_ATRIBUTO[tipoAtributo];
     if (!servicio) return;
 
@@ -532,6 +652,43 @@ export default function Productos() {
     } catch (err) {
       console.error(err);
       setError(mensajeDeError(err, 'No se pudo eliminar el atributo.'));
+    }
+  }
+
+  async function handleGuardarColor(e) {
+    e.preventDefault();
+    if (!formColor.nombre.trim()) {
+      setError('El nombre del color es obligatorio.');
+      return;
+    }
+    if (!formColor.codigo.trim()) {
+      setError('El código corto del color es obligatorio.');
+      return;
+    }
+    if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(formColor.codigoHex.trim())) {
+      setError('El código hexadecimal debe tener formato válido (ej. #1B3A5C).');
+      return;
+    }
+
+    try {
+      setGuardandoColor(true);
+      setError('');
+
+      if (editandoColorId) {
+        await modificarColor(editandoColorId, formColor);
+        setMensaje('Color modificado exitosamente.');
+      } else {
+        await altaColor(formColor);
+        setMensaje('Color registrado exitosamente.');
+      }
+
+      setModalColorAbierto(false);
+      setColores(await obtenerColores());
+    } catch (err) {
+      console.error(err);
+      setError(mensajeDeError(err, 'Error al guardar el color.'));
+    } finally {
+      setGuardandoColor(false);
     }
   }
 
@@ -549,13 +706,20 @@ export default function Productos() {
     setPagina(1);
   }
 
+  const algunModalAbierto =
+    modalProductoAbierto ||
+    modalCategoriaAbierto ||
+    modalAtributoAbierto ||
+    modalColorAbierto ||
+    Boolean(productoVariantesActivo);
+
   return (
     <main className="view productos-view">
       <header className="page-head">
         <article>
           <h1>Productos</h1>
           <p>
-            Módulo de gestión de productos, categorías y atributos
+            Módulo de gestión de productos, variantes, categorías y atributos
           </p>
         </article>
 
@@ -596,10 +760,12 @@ export default function Productos() {
 
           {pestanaActiva === 'atributos' && (
             <>
-              <button type="button" className="btn btn-primary" onClick={abrirNuevoAtributo}>
-                <Plus size={16} />
-                {metaAtributo.nuevoLabel}
-              </button>
+              {metaAtributo.nuevoLabel && (
+                <button type="button" className="btn btn-primary" onClick={abrirNuevoAtributo}>
+                  <Plus size={16} />
+                  {metaAtributo.nuevoLabel}
+                </button>
+              )}
               <button
                 className="btn"
                 type="button"
@@ -618,7 +784,7 @@ export default function Productos() {
         mensaje={mensaje}
         onClose={() => setMensaje('')}
       />
-      {!modalProductoAbierto && !modalCategoriaAbierto && !modalAtributoAbierto && (
+      {!algunModalAbierto && (
         <AlertBanner
           tipo="danger"
           mensaje={error}
@@ -650,7 +816,7 @@ export default function Productos() {
           onClick={() => { setPestanaActiva('atributos'); setError(''); }}
         >
           <Tags size={16} />
-          Atributos
+          Atributos y catálogos
         </button>
       </nav>
 
@@ -767,6 +933,7 @@ export default function Productos() {
                       <tr>
                         <th scope="col">PRODUCTO / DESCRIPCIÓN</th>
                         <th scope="col">CATEGORÍA</th>
+                        <th scope="col">ESCALA DE TALLES</th>
                         <th scope="col">ATRIBUTOS</th>
                         <th scope="col" className="actions-header">ACCIONES</th>
                       </tr>
@@ -786,6 +953,12 @@ export default function Productos() {
                             <span className="category-pill category-pill-icon">
                               <FolderTree size={12} />
                               {prod.categoriaNombre}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="category-pill category-pill-icon" title="Escala de talles asignada">
+                              <Ruler size={12} />
+                              {prod.escalaTalleNombre}
                             </span>
                           </td>
                           <td>
@@ -816,6 +989,14 @@ export default function Productos() {
                             </div>
                           </td>
                           <td className="actions">
+                            <button
+                              type="button"
+                              className="btn btn-small"
+                              onClick={() => setProductoVariantesActivo(prod)}
+                              title="Gestionar variantes de talle y color"
+                            >
+                              <Layers size={14} /> Variantes
+                            </button>
                             <button
                               type="button"
                               className="btn btn-icon"
@@ -937,7 +1118,7 @@ export default function Productos() {
       )}
 
       {/* =========================================================
-          CONTENIDO: PESTAÑA ATRIBUTOS
+          CONTENIDO: PESTAÑA ATRIBUTOS, COLORES Y ESCALAS
           ========================================================= */}
       {pestanaActiva === 'atributos' && (
         <section className="card">
@@ -953,7 +1134,7 @@ export default function Productos() {
               <Search size={14} className="filter-icon" />
               <input
                 type="text"
-                placeholder={`Buscar en ${tipoAtributo}...`}
+                placeholder={`Buscar en ${metaAtributo.plural.toLowerCase()}...`}
                 value={busquedaAtributo}
                 onChange={(e) => setBusquedaAtributo(e.target.value)}
               />
@@ -989,13 +1170,123 @@ export default function Productos() {
             >
               Materiales ({materiales.length})
             </button>
+            <button
+              type="button"
+              className={`btn btn-small${tipoAtributo === 'colores' ? ' btn-primary' : ''}`}
+              onClick={() => { setTipoAtributo('colores'); setBusquedaAtributo(''); }}
+            >
+              <Palette size={14} /> Colores ({colores.length})
+            </button>
+            <button
+              type="button"
+              className={`btn btn-small${tipoAtributo === 'escalas' ? ' btn-primary' : ''}`}
+              onClick={() => { setTipoAtributo('escalas'); setBusquedaAtributo(''); }}
+            >
+              <Ruler size={14} /> Escalas de talle ({escalasTalle.length})
+            </button>
           </div>
 
           {atributosFiltrados.length === 0 ? (
             <div className="empty-state">
               <Tags size={48} className="empty-icon" />
-              <h3>No se encontraron registros de {tipoAtributo}</h3>
-              <p>Hacé clic en &quot;{metaAtributo.nuevoLabel}&quot; para agregar el primer registro a este catálogo.</p>
+              <h3>No se encontraron registros de {metaAtributo.plural.toLowerCase()}</h3>
+              {metaAtributo.nuevoLabel ? (
+                <p>Hacé clic en &quot;{metaAtributo.nuevoLabel}&quot; para agregar el primer registro a este catálogo.</p>
+              ) : (
+                <p>No hay escalas de talle cargadas en el sistema.</p>
+              )}
+            </div>
+          ) : tipoAtributo === 'colores' ? (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">COLOR</th>
+                    <th scope="col">CÓDIGO CORTO</th>
+                    <th scope="col">MUESTRA / HEX</th>
+                    <th scope="col" className="actions-header">ACCIONES</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {atributosFiltrados.map((item) => (
+                    <tr key={item.id} className="table-row-hover">
+                      <th scope="row" className="row-title">
+                        <strong>{item.nombre}</strong>
+                      </th>
+                      <td>
+                        <code>{item.codigo}</code>
+                      </td>
+                      <td>
+                        <span className="color-cell-chip">
+                          <input
+                            type="color"
+                            className="color-swatch-dot"
+                            value={expandirHexColor(item.codigoHex)}
+                            readOnly
+                            tabIndex={-1}
+                            aria-hidden="true"
+                          />
+                          <code>{item.codigoHex}</code>
+                        </span>
+                      </td>
+                      <td className="actions">
+                        <button
+                          type="button"
+                          className="btn btn-icon"
+                          onClick={() => abrirEditarAtributo(item)}
+                          title="Editar color"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-icon danger"
+                          onClick={() => handleEliminarAtributo(item.id, item.nombre)}
+                          title="Eliminar color"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : tipoAtributo === 'escalas' ? (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">ESCALA DE TALLES</th>
+                    <th scope="col">TALLES HABILITADOS (EN ORDEN)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {atributosFiltrados.map((esc) => {
+                    const talles = tallesPorEscala[esc.id] || [];
+                    return (
+                      <tr key={esc.id} className="table-row-hover">
+                        <th scope="row" className="row-title">
+                          <strong>{esc.nombre}</strong>
+                        </th>
+                        <td>
+                          {talles.length === 0 ? (
+                            <span className="muted text-sm">Sin talles asociados</span>
+                          ) : (
+                            <div className="pill-list">
+                              {talles.map((t) => (
+                                <span key={t.id} className="talle-pill">
+                                  {t.nombre}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           ) : (
             <div className="table-scroll">
@@ -1069,18 +1360,18 @@ export default function Productos() {
                 )}
               </AlertBanner>
 
-              <div className="form-row-2">
-                <label>
-                  Nombre del Producto *
-                  <input
-                    type="text"
-                    value={formProducto.nombre}
-                    onChange={(e) => setFormProducto({ ...formProducto, nombre: e.target.value })}
-                    placeholder="Ej. Remera Básica"
-                    required
-                  />
-                </label>
+              <label>
+                Nombre del Producto *
+                <input
+                  type="text"
+                  value={formProducto.nombre}
+                  onChange={(e) => setFormProducto({ ...formProducto, nombre: e.target.value })}
+                  placeholder="Ej. Remera Básica"
+                  required
+                />
+              </label>
 
+              <div className="form-row-2">
                 <label>
                   Categoría *
                   <select
@@ -1095,6 +1386,27 @@ export default function Productos() {
                         <option key={c.id} value={c.id} disabled={tieneSubcategorias}>
                           {c.padreNombre ? `${c.padreNombre} > ${c.nombre}` : c.nombre}
                           {tieneSubcategorias ? ' (Categoría padre)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+
+                <label>
+                  Escala de talles *
+                  <select
+                    value={formProducto.idEscalaTalle}
+                    onChange={(e) => setFormProducto({ ...formProducto, idEscalaTalle: e.target.value })}
+                    required
+                  >
+                    <option value="" disabled>Seleccione una escala de talles...</option>
+                    {escalasTalle.map((esc) => {
+                      const talles = tallesPorEscala[esc.id] || [];
+                      const muestra = resumirTallesEscala(talles, 3);
+                      const resumenTalles = muestra ? ` (${muestra})` : '';
+                      return (
+                        <option key={esc.id} value={esc.id}>
+                          {esc.nombre}{resumenTalles}
                         </option>
                       );
                     })}
@@ -1183,6 +1495,17 @@ export default function Productos() {
       )}
 
       {/* =========================================================
+          MODAL: VARIANTES DE UN PRODUCTO
+          ========================================================= */}
+      {productoVariantesActivo && (
+        <VariantesProductoModal
+          producto={productoVariantesActivo}
+          colores={colores}
+          onClose={() => setProductoVariantesActivo(null)}
+        />
+      )}
+
+      {/* =========================================================
           MODAL: CATEGORÍA (ALTA / EDICIÓN)
           ========================================================= */}
       {modalCategoriaAbierto && (
@@ -1241,7 +1564,7 @@ export default function Productos() {
       )}
 
       {/* =========================================================
-          MODAL: ATRIBUTO (ALTA / EDICIÓN)
+          MODAL: ATRIBUTO SIMPLE (ALTA / EDICIÓN)
           ========================================================= */}
       {modalAtributoAbierto && (
         <div className="modal-backdrop" onClick={() => setModalAtributoAbierto(false)}>
@@ -1275,6 +1598,82 @@ export default function Productos() {
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={guardandoAtributo}>
                   {guardandoAtributo ? 'Guardando...' : editandoAtributoId ? 'Guardar cambios' : 'Crear atributo'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          MODAL: COLOR (ALTA / EDICIÓN)
+          ========================================================= */}
+      {modalColorAbierto && (
+        <div className="modal-backdrop" onClick={() => setModalColorAbierto(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <header className="modal-header">
+              <h2>{editandoColorId ? 'Modificar color' : 'Nuevo color'}</h2>
+              <button type="button" className="btn-close" onClick={() => setModalColorAbierto(false)} aria-label="Cerrar">
+                <X size={18} />
+              </button>
+            </header>
+
+            <form onSubmit={handleGuardarColor} className="modal-form">
+              <AlertBanner tipo="danger" mensaje={error} />
+
+              <div className="form-row-2">
+                <label>
+                  Nombre del color *
+                  <input
+                    type="text"
+                    maxLength={50}
+                    value={formColor.nombre}
+                    onChange={(e) => setFormColor({ ...formColor, nombre: e.target.value })}
+                    placeholder="Ej. Azul Marino"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Código corto (para SKU) *
+                  <input
+                    type="text"
+                    maxLength={10}
+                    value={formColor.codigo}
+                    onChange={(e) => setFormColor({ ...formColor, codigo: e.target.value.toUpperCase() })}
+                    placeholder="Ej. AZM"
+                    required
+                  />
+                </label>
+              </div>
+
+              <label>
+                Color hexadecimal *
+                <div className="color-picker-row">
+                  <input
+                    type="color"
+                    className="color-picker-native"
+                    value={expandirHexColor(formColor.codigoHex)}
+                    onChange={(e) => setFormColor({ ...formColor, codigoHex: e.target.value.toUpperCase() })}
+                    aria-label="Selector de color"
+                  />
+                  <input
+                    type="text"
+                    maxLength={7}
+                    value={formColor.codigoHex}
+                    onChange={(e) => setFormColor({ ...formColor, codigoHex: e.target.value.toUpperCase() })}
+                    placeholder="#1B3A5C"
+                    required
+                  />
+                </div>
+              </label>
+
+              <div className="modal-actions">
+                <button type="button" className="btn" onClick={() => setModalColorAbierto(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={guardandoColor}>
+                  {guardandoColor ? 'Guardando...' : editandoColorId ? 'Guardar cambios' : 'Crear color'}
                 </button>
               </div>
             </form>

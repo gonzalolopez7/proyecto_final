@@ -11,6 +11,7 @@ function armarPayloadProducto(dto = {}) {
     nombre: limpiarTexto(dto.nombre),
     descripcion: limpiarTexto(dto.descripcion),
     idCategoria: dto.idCategoria,
+    idEscalaTalle: dto.idEscalaTalle,
     idGenero: dto.idGenero || null,
     idTemporada: dto.idTemporada || null,
     idFit: dto.idFit || null,
@@ -36,6 +37,7 @@ export async function obtenerProductos(params = {}) {
   return normalizarRespuestaPaginada(data, query.Page, (p) => ({
     ...p,
     categoriaNombre: p.categoriaNombre || 'Sin categoría',
+    escalaTalleNombre: p.escalaTalleNombre || 'Sin escala',
   }));
 }
 

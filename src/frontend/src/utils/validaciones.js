@@ -53,3 +53,42 @@ export function validarTelefono(telefono) {
   if (!telefono) return false;
   return /^\d{10}$/.test(String(telefono).trim());
 }
+
+/**
+ * Normaliza un código hexadecimal de 3 o 6 caracteres al formato #RRGGBB de 6 caracteres.
+ */
+export function expandirHexColor(hex) {
+  const limpio = String(hex || '').trim();
+  if (/^#[0-9A-Fa-f]{6}$/.test(limpio)) return limpio.toUpperCase();
+  if (/^#[0-9A-Fa-f]{3}$/.test(limpio)) {
+    const r = limpio[1];
+    const g = limpio[2];
+    const b = limpio[3];
+    return `#${r}${r}${g}${g}${b}${b}`.toUpperCase();
+  }
+  return '#1B3A5C';
+}
+
+/**
+ * Devuelve un resumen breve de talles de una escala (máximo `maxMuestras` talles de ejemplo)
+ * para evitar que escalas extensas desborden selectores o encabezados de modales.
+ */
+export function resumirTallesEscala(talles = [], maxMuestras = 3) {
+  if (!Array.isArray(talles) || talles.length === 0) return '';
+
+  const nombres = talles.map((t) => t?.nombre).filter(Boolean);
+  if (nombres.length === 0) return '';
+
+  if (nombres.length <= maxMuestras) {
+    return nombres.join(', ');
+  }
+
+  const muestras = [];
+  for (let i = 0; i < maxMuestras; i += 1) {
+    const idx = Math.floor(((i + 0.5) * nombres.length) / maxMuestras);
+    muestras.push(nombres[idx]);
+  }
+
+  return `${muestras.join(', ')}, ...`;
+}
+

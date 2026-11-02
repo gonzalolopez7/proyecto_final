@@ -61,3 +61,64 @@ export const obtenerMateriales = materialService.obtenerTodos;
 export const altaMaterial = materialService.alta;
 export const modificarMaterial = materialService.modificar;
 export const eliminarMaterial = materialService.eliminar;
+
+// ==================== COLORES ====================
+const COLOR_ENDPOINT = '/api/Color';
+
+function armarPayloadColor(dto = {}) {
+  const hex = limpiarTexto(dto.codigoHex).toUpperCase();
+  return {
+    nombre: limpiarTexto(dto.nombre),
+    codigo: limpiarTexto(dto.codigo).toUpperCase(),
+    codigoHex: hex.startsWith('#') ? hex : `#${hex}`,
+  };
+}
+
+export async function obtenerColores() {
+  const { data } = await api.get(COLOR_ENDPOINT);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function obtenerColorPorId(id) {
+  const { data } = await api.get(`${COLOR_ENDPOINT}/${id}`);
+  return data;
+}
+
+export async function altaColor(dto) {
+  const { data } = await api.post(COLOR_ENDPOINT, armarPayloadColor(dto));
+  return data;
+}
+
+export async function modificarColor(id, dto) {
+  const { data } = await api.put(`${COLOR_ENDPOINT}/${id}`, armarPayloadColor(dto));
+  return data;
+}
+
+export async function eliminarColor(id) {
+  const { data } = await api.delete(`${COLOR_ENDPOINT}/${id}`);
+  return data;
+}
+
+// ==================== ESCALAS DE TALLE Y TALLES ====================
+const ESCALA_ENDPOINT = '/api/escala-talle';
+
+export async function obtenerEscalasTalle() {
+  const { data } = await api.get(ESCALA_ENDPOINT);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function obtenerEscalaTallePorId(id) {
+  const { data } = await api.get(`${ESCALA_ENDPOINT}/${id}`);
+  return data;
+}
+
+export async function obtenerTallesPorEscala(idEscalaTalle) {
+  if (!idEscalaTalle) return [];
+  const { data } = await api.get(`${ESCALA_ENDPOINT}/${idEscalaTalle}/talles`);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function obtenerTallePorId(id) {
+  const { data } = await api.get(`/api/Talle/${id}`);
+  return data;
+}
