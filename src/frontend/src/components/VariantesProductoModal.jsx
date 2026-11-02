@@ -9,6 +9,8 @@ import {
   Sparkles,
   Ruler,
   FolderTree,
+  Truck,
+  Award,
 } from 'lucide-react';
 import {
   obtenerVariantesPorProducto,
@@ -17,7 +19,15 @@ import {
   eliminarVariante,
   restaurarVariante,
 } from '../services/varianteService';
+import {
+  obtenerProveedoresPorVariante,
+  altaVarianteProveedor,
+  modificarVarianteProveedor,
+  eliminarVarianteProveedor,
+} from '../services/varianteProveedorService';
+import { obtenerProveedores } from '../services/proveedorService';
 import { obtenerTallesPorEscala } from '../services/atributoService';
+import { formatoMoneda } from '../utils/numeroALetras';
 import { mensajeDeError, codigoDeError, datosDeError } from '../services/errores';
 import { expandirHexColor, resumirTallesEscala } from '../utils/validaciones';
 import AlertBanner from './AlertBanner';
@@ -27,6 +37,12 @@ const VARIANTE_INICIAL = {
   idTalle: '',
   idColor: '',
   stockMinimo: 0,
+};
+
+const FORM_PROV_INICIAL = {
+  idProveedor: '',
+  codigoProveedor: '',
+  costo: 0,
 };
 
 function generarPrefijoProducto(nombre = '') {
@@ -54,6 +70,7 @@ export default function VariantesProductoModal({
 }) {
   const [variantes, setVariantes] = useState([]);
   const [tallesEscala, setTallesEscala] = useState([]);
+  const [catalogoProveedores, setCatalogoProveedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
 
@@ -63,6 +80,14 @@ export default function VariantesProductoModal({
 
   const [editandoId, setEditandoId] = useState(null);
   const [form, setForm] = useState(VARIANTE_INICIAL);
+
+  // Estados para el panel de Proveedores y Costos de una variante seleccionada
+  const [varianteProveedoresActiva, setVarianteProveedoresActiva] = useState(null);
+  const [proveedoresVariante, setProveedoresVariante] = useState([]);
+  const [loadingProveedoresVar, setLoadingProveedoresVar] = useState(false);
+  const [guardandoProveedorVar, setGuardandoProveedorVar] = useState(false);
+  const [editandoRelacionId, setEditandoRelacionId] = useState(null);
+  const [formProv, setFormProv] = useState(FORM_PROV_INICIAL);
 
   async function cargarDatosProducto() {
     if (!producto?.id) return;
@@ -97,18 +122,27 @@ export default function VariantesProductoModal({
       try {
         setLoading(true);
         setError('');
-        const [listaVariantes, listaTalles] = await Promise.all([
+        const [listaVariantes, listaTalles, respProveedores] = await Promise.all([
           obtenerVariantesPorProducto(producto.id),
           obtenerTallesPorEscala(producto.idEscalaTalle),
+          obtenerProveedores({ page: 1, pageSize: 100 }),
         ]);
         if (!activo) return;
         setVariantes(listaVariantes);
         setTallesEscala(listaTalles);
+        const itemsProv = respProveedores?.items || [];
+        setCatalogoProveedores(itemsProv);
+
         setForm({
           sku: '',
           idTalle: listaTalles[0]?.id || '',
           idColor: colores[0]?.id || '',
           stockMinimo: 0,
+        });
+        setFormProv({
+          idProveedor: itemsProv[0]?.id || '',
+          codigoProveedor: '',
+          costo: 0,
         });
       } catch (err) {
         if (!activo) return;
@@ -254,10 +288,142 @@ export default function VariantesProductoModal({
       if (editandoId === id) {
         limpiarFormulario();
       }
+      if (varianteProveedoresActiva?.id === id) {
+        setVarianteProveedoresActiva(null);
+      }
       await cargarDatosProducto();
     } catch (err) {
       console.error(err);
       setError(mensajeDeError(err, 'No se pudo dar de baja la variante.'));
+    }
+  }
+
+  // =========================================================
+  // GESTIÓN DE PROVEEDORES Y COSTOS POR VARIANTE
+  // =========================================================
+  async function cargarProveedoresDeVariante(idVariante) {
+    if (!idVariante) return;
+    try {
+      setLoadingProveedoresVar(true);
+      const lista = await obtenerProveedoresPorVariante(idVariante);
+      setProveedoresVariante(lista);
+    } catch (err) {
+      console.error(err);
+      setError(mensajeDeError(err, 'No se pudieron cargar los proveedores de la variante.'));
+    } finally {
+      setLoadingProveedoresVar(false);
+    }
+  }
+
+  async function toggleProveedoresVariante(variante) {
+    if (varianteProveedoresActiva?.id === variante.id) {
+      setVarianteProveedoresActiva(null);
+      setEditandoRelacionId(null);
+      return;
+    }
+
+    setVarianteProveedoresActiva(variante);
+    setEditandoRelacionId(null);
+    setError('');
+    setMensaje('');
+    setFormProv({
+      idProveedor: catalogoProveedores[0]?.id || '',
+      codigoProveedor: variante.sku || '',
+      costo: 0,
+    });
+    await cargarProveedoresDeVariante(variante.id);
+  }
+
+  function limpiarFormProv() {
+    setEditandoRelacionId(null);
+    setFormProv({
+      idProveedor: catalogoProveedores[0]?.id || '',
+      codigoProveedor: varianteProveedoresActiva?.sku || '',
+      costo: 0,
+    });
+  }
+
+  function abrirEditarRelacion(rel) {
+    setEditandoRelacionId(rel.id);
+    setError('');
+    setMensaje('');
+    setFormProv({
+      idProveedor: rel.idProveedor,
+      codigoProveedor: rel.codigoProveedor || '',
+      costo: rel.costo ?? 0,
+    });
+  }
+
+  async function handleGuardarProveedorVariante(e) {
+    e.preventDefault();
+    if (!varianteProveedoresActiva) return;
+
+    setError('');
+    setMensaje('');
+
+    if (!editandoRelacionId && !formProv.idProveedor) {
+      setError('Seleccioná un proveedor para vincular.');
+      return;
+    }
+    if (!formProv.codigoProveedor.trim()) {
+      setError('El código del proveedor es obligatorio.');
+      return;
+    }
+    if (Number(formProv.costo) < 0) {
+      setError('El costo no puede ser negativo.');
+      return;
+    }
+
+    try {
+      setGuardandoProveedorVar(true);
+
+      if (editandoRelacionId) {
+        await modificarVarianteProveedor(editandoRelacionId, {
+          codigoProveedor: formProv.codigoProveedor,
+          costo: formProv.costo,
+        });
+        setMensaje('Costo y código del proveedor actualizados.');
+      } else {
+        await altaVarianteProveedor({
+          idVariante: varianteProveedoresActiva.id,
+          idProveedor: formProv.idProveedor,
+          codigoProveedor: formProv.codigoProveedor,
+          costo: formProv.costo,
+        });
+        setMensaje(`Proveedor vinculado a la variante ${varianteProveedoresActiva.sku}.`);
+      }
+
+      limpiarFormProv();
+      await cargarProveedoresDeVariante(varianteProveedoresActiva.id);
+    } catch (err) {
+      console.error(err);
+      setError(mensajeDeError(err, 'No se pudo guardar la relación con el proveedor.'));
+    } finally {
+      setGuardandoProveedorVar(false);
+    }
+  }
+
+  async function handleEliminarRelacion(rel) {
+    if (
+      !window.confirm(
+        `¿Seguro que desea desvincular al proveedor "${rel.proveedorNombre || ''}" de la variante "${varianteProveedoresActiva?.sku}"?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setError('');
+      setMensaje('');
+      await eliminarVarianteProveedor(rel.id);
+      setMensaje('Proveedor desvinculado de la variante.');
+      if (editandoRelacionId === rel.id) {
+        limpiarFormProv();
+      }
+      await cargarProveedoresDeVariante(varianteProveedoresActiva.id);
+    } catch (err) {
+      console.error(err);
+      setError(mensajeDeError(err, 'No se pudo desvincular el proveedor.'));
     }
   }
 
@@ -466,58 +632,273 @@ export default function VariantesProductoModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {variantes.map((v) => (
-                      <tr
-                        key={v.id}
-                        className={`table-row-hover${editandoId === v.id ? ' row-editing' : ''}`}
-                      >
-                        <th scope="row" className="row-title">
-                          <code>{v.sku}</code>
-                        </th>
-                        <td>
-                          <span className="talle-pill">{v.talleNombre || '—'}</span>
-                        </td>
-                        <td>
-                          <span className="color-cell-chip">
-                            <input
-                              type="color"
-                              className="color-swatch-dot"
-                              value={expandirHexColor(v.colorCodigoHex)}
-                              readOnly
-                              tabIndex={-1}
-                              aria-hidden="true"
-                            />
-                            <span>{v.colorNombre || '—'}</span>
-                          </span>
-                        </td>
-                        <td className="num font-mono">
-                          {v.stockMinimo} u.
-                        </td>
-                        <td className="actions">
-                          <button
-                            type="button"
-                            className="btn btn-icon"
-                            onClick={() => abrirEditarVariante(v)}
-                            title="Editar variante"
-                          >
-                            <Edit3 size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-icon danger"
-                            onClick={() => handleEliminarVariante(v.id, v.sku)}
-                            title="Dar de baja variante"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {variantes.map((v) => {
+                      const proveedoresAbiertos = varianteProveedoresActiva?.id === v.id;
+                      return (
+                        <tr
+                          key={v.id}
+                          className={`table-row-hover${editandoId === v.id || proveedoresAbiertos ? ' row-editing' : ''}`}
+                        >
+                          <th scope="row" className="row-title">
+                            <code>{v.sku}</code>
+                          </th>
+                          <td>
+                            <span className="talle-pill">{v.talleNombre || '—'}</span>
+                          </td>
+                          <td>
+                            <span className="color-cell-chip">
+                              <input
+                                type="color"
+                                className="color-swatch-dot"
+                                value={expandirHexColor(v.colorCodigoHex)}
+                                readOnly
+                                tabIndex={-1}
+                                aria-hidden="true"
+                              />
+                              <span>{v.colorNombre || '—'}</span>
+                            </span>
+                          </td>
+                          <td className="num font-mono">
+                            {v.stockMinimo} u.
+                          </td>
+                          <td className="actions">
+                            <button
+                              type="button"
+                              className={`btn btn-small${proveedoresAbiertos ? ' btn-primary' : ''}`}
+                              onClick={() => toggleProveedoresVariante(v)}
+                              title="Ver y gestionar proveedores y costos de esta variante"
+                            >
+                              <Truck size={14} />
+                              Proveedores
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-icon"
+                              onClick={() => abrirEditarVariante(v)}
+                              title="Editar variante"
+                            >
+                              <Edit3 size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-icon danger"
+                              onClick={() => handleEliminarVariante(v.id, v.sku)}
+                              title="Dar de baja variante"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
           </div>
+
+          {/* Panel desplegable: Proveedores y Costos de la Variante seleccionada */}
+          {varianteProveedoresActiva && (
+            <section className="variante-proveedores-panel">
+              <header className="variante-proveedores-head">
+                <div className="variante-proveedores-title">
+                  <h3>
+                    <Truck size={16} />
+                    Proveedores y costos de <code>{varianteProveedoresActiva.sku}</code>
+                  </h3>
+                  <span className="talle-pill">{varianteProveedoresActiva.talleNombre}</span>
+                  <span className="color-cell-chip text-sm">
+                    <input
+                      type="color"
+                      className="color-swatch-dot"
+                      value={expandirHexColor(varianteProveedoresActiva.colorCodigoHex)}
+                      readOnly
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    />
+                    <span>{varianteProveedoresActiva.colorNombre}</span>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-small"
+                  onClick={() => setVarianteProveedoresActiva(null)}
+                >
+                  <X size={14} /> Cerrar panel
+                </button>
+              </header>
+
+              {/* Formulario de vinculación / edición de costo por proveedor */}
+              <form onSubmit={handleGuardarProveedorVariante} className="modal-form variante-inline-form">
+                <fieldset className="form-section">
+                  <legend>
+                    {editandoRelacionId
+                      ? 'Modificar código y costo del proveedor'
+                      : 'Vincular proveedor a esta variante'}
+                  </legend>
+
+                  {catalogoProveedores.length === 0 ? (
+                    <p className="muted text-sm">
+                      No hay proveedores registrados. Creá un proveedor desde el módulo Proveedores para asociar costos.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="variante-prov-form-grid">
+                        <label>
+                          Proveedor *
+                          <select
+                            value={formProv.idProveedor}
+                            onChange={(e) => setFormProv({ ...formProv, idProveedor: e.target.value })}
+                            disabled={Boolean(editandoRelacionId)}
+                            required
+                          >
+                            <option value="" disabled>
+                              Seleccione un proveedor...
+                            </option>
+                            {catalogoProveedores.map((prov) => (
+                              <option key={prov.id} value={prov.id}>
+                                {prov.nombre} ({prov.razonSocial})
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label>
+                          Código en el proveedor *
+                          <input
+                            type="text"
+                            maxLength={50}
+                            value={formProv.codigoProveedor}
+                            onChange={(e) =>
+                              setFormProv({
+                                ...formProv,
+                                codigoProveedor: e.target.value.toUpperCase(),
+                              })
+                            }
+                            placeholder="Ej. COD-PROV-01"
+                            required
+                          />
+                        </label>
+
+                        <label>
+                          Costo unitario ($) *
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formProv.costo}
+                            onChange={(e) => setFormProv({ ...formProv, costo: e.target.value })}
+                            placeholder="0.00"
+                            required
+                          />
+                        </label>
+                      </div>
+
+                      <div className="variante-form-actions">
+                        {editandoRelacionId && (
+                          <button
+                            type="button"
+                            className="btn btn-small"
+                            onClick={limpiarFormProv}
+                          >
+                            Cancelar edición
+                          </button>
+                        )}
+                        <button
+                          type="submit"
+                          className="btn btn-primary btn-small"
+                          disabled={guardandoProveedorVar}
+                        >
+                          <Plus size={14} />
+                          {guardandoProveedorVar
+                            ? 'Guardando...'
+                            : editandoRelacionId
+                              ? 'Actualizar costo / código'
+                              : 'Asociar proveedor'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </fieldset>
+              </form>
+
+              {/* Tabla comparativa de proveedores (ordenada de menor a mayor costo) */}
+              {loadingProveedoresVar ? (
+                <p className="loading-state">Cargando costos por proveedor...</p>
+              ) : proveedoresVariante.length === 0 ? (
+                <div className="empty-state empty-state-compact">
+                  <Truck size={32} className="empty-icon" />
+                  <p className="muted text-sm">
+                    Ningún proveedor está vinculado todavía a la variante <strong>{varianteProveedoresActiva.sku}</strong>.
+                  </p>
+                </div>
+              ) : (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">PROVEEDOR</th>
+                        <th scope="col">CÓD. PROVEEDOR</th>
+                        <th scope="col" className="num">COSTO UNITARIO</th>
+                        <th scope="col" className="actions-header">ACCIONES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {proveedoresVariante.map((rel, idx) => {
+                        const esMejorCosto = idx === 0 && proveedoresVariante.length > 1;
+                        return (
+                          <tr
+                            key={rel.id}
+                            className={`table-row-hover${editandoRelacionId === rel.id ? ' row-editing' : ''}`}
+                          >
+                            <th scope="row" className="row-title">
+                              <div className="row-stack">
+                                <span className="variante-prov-name-row">
+                                  <strong className="row-primary-text">{rel.proveedorNombre || '—'}</strong>
+                                  {esMejorCosto && (
+                                    <span className="best-cost-badge" title="Proveedor con el menor costo registrado para esta variante">
+                                      <Award size={12} /> Mejor costo
+                                    </span>
+                                  )}
+                                </span>
+                                {rel.proveedorRazonSocial && (
+                                  <span className="row-secondary-text">{rel.proveedorRazonSocial}</span>
+                                )}
+                              </div>
+                            </th>
+                            <td>
+                              <code>{rel.codigoProveedor}</code>
+                            </td>
+                            <td className="num font-mono font-bold">
+                              {formatoMoneda(rel.costo)}
+                            </td>
+                            <td className="actions">
+                              <button
+                                type="button"
+                                className="btn btn-icon"
+                                onClick={() => abrirEditarRelacion(rel)}
+                                title="Modificar código o costo"
+                              >
+                                <Edit3 size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-icon danger"
+                                onClick={() => handleEliminarRelacion(rel)}
+                                title="Desvincular proveedor"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
         </div>
       </div>
     </div>

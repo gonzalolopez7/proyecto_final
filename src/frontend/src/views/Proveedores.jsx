@@ -13,6 +13,7 @@ import {
   MapPin,
   RotateCcw,
   RefreshCcw,
+  Layers,
 } from 'lucide-react';
 import {
   obtenerProveedores,
@@ -31,6 +32,7 @@ import {
 import { mensajeDeError, codigoDeError, datosDeError } from '../services/errores';
 import AlertBanner from '../components/AlertBanner';
 import PaginationBar from '../components/PaginationBar';
+import CatalogoProveedorModal from '../components/CatalogoProveedorModal';
 
 const PROVEEDOR_INICIAL = {
   nombre: '',
@@ -62,6 +64,7 @@ export default function Proveedores() {
   const [editandoId, setEditandoId] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [form, setForm] = useState(PROVEEDOR_INICIAL);
+  const [proveedorCatalogoActivo, setProveedorCatalogoActivo] = useState(null);
 
   const cargarProveedores = useCallback(async (pag = 1) => {
     try {
@@ -396,6 +399,15 @@ export default function Proveedores() {
                       <td className="actions">
                         <button
                           type="button"
+                          className="btn btn-small"
+                          onClick={() => setProveedorCatalogoActivo(prov)}
+                          title="Gestionar catálogo de variantes, códigos y costos de este proveedor"
+                        >
+                          <Layers size={14} />
+                          Catálogo / Costos
+                        </button>
+                        <button
+                          type="button"
                           className="btn btn-icon"
                           onClick={() => abrirEditar(prov)}
                           title="Editar proveedor"
@@ -561,6 +573,14 @@ export default function Proveedores() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal: Catálogo de Variantes y Costos del Proveedor */}
+      {proveedorCatalogoActivo && (
+        <CatalogoProveedorModal
+          proveedor={proveedorCatalogoActivo}
+          onClose={() => setProveedorCatalogoActivo(null)}
+        />
       )}
     </main>
   );

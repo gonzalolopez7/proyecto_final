@@ -997,6 +997,92 @@ th.actions-header {
   gap: 8px;
 }
 
+.variantes-list-head-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.variante-proveedores-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border-line);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: #FFFFFF;
+}
+
+.variante-proveedores-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.variante-proveedores-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.variante-proveedores-title h3 {
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.variante-prov-form-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 160px;
+  gap: 12px;
+  align-items: end;
+}
+
+.catalogo-prov-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1.2fr 150px;
+  gap: 12px;
+  align-items: end;
+}
+
+.grid-span-2 {
+  grid-column: span 2;
+}
+
+.variante-chips-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.variante-prov-name-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.best-cost-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: var(--success-text);
+}
+
 .row-editing td,
 .row-editing th {
   background: var(--tape-soft) !important;
@@ -1896,8 +1982,14 @@ th.actions-header {
     grid-template-columns: 1fr;
   }
 
-  .variante-form-grid {
+  .variante-form-grid,
+  .variante-prov-form-grid,
+  .catalogo-prov-form-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .grid-span-2 {
+    grid-column: span 2;
   }
 
   .modal-backdrop {
@@ -1939,8 +2031,14 @@ th.actions-header {
   }
 
   .role-options,
-  .variante-form-grid {
+  .variante-form-grid,
+  .variante-prov-form-grid,
+  .catalogo-prov-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .grid-span-2 {
+    grid-column: span 1;
   }
 }
 
