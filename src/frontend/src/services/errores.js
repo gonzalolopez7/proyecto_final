@@ -55,3 +55,10 @@ export function mensajeDeError(error, porDefecto = 'Ocurrió un error inesperado
 export function codigoDeError(error) {
   return error?.response?.data?.code || null;
 }
+
+/**
+ * Extrae el cuerpo de datos (ProblemDetails) devuelto por la API ante un error.
+ */
+export function datosDeError(error) {
+  return error?.response?.data || null;
+}

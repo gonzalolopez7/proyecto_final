@@ -1,100 +1,97 @@
-import api from './api';
+import api, {
+  limpiarTexto,
+  limpiarTextoOpcional,
+  armarParametrosPaginados,
+  normalizarRespuestaPaginada,
+} from './api';
+
+const ENDPOINT = '/api/User';
 
 export const ROLES_DISPONIBLES = [
   { id: 'Admin', nombre: 'Admin', etiqueta: 'Administrador', detalle: 'Acceso completo al sistema y gestión de usuarios' },
-  { id: 'Encargado', nombre: 'Encargado', etiqueta: 'Encargado', detalle: 'Gestión operativa y proveedores' },
-  { id: 'Comprador', nombre: 'Comprador', etiqueta: 'Comprador', detalle: 'Gestión de compras y proveedores' },
-  { id: 'OperadorInventario', nombre: 'OperadorInventario', etiqueta: 'Operador de inventario', detalle: 'Control de inventario y stock' },
-  { id: 'OperadorLogistica', nombre: 'OperadorLogistica', etiqueta: 'Operador de logística', detalle: 'Movimientos de stock y logística' },
+  { id: 'Encargado', nombre: 'Encargado', etiqueta: 'Encargado', detalle: 'Gestión operativa, compras y proveedores' },
+  { id: 'Comprador', nombre: 'Comprador', etiqueta: 'Comprador', detalle: 'Gestión de órdenes de compra y proveedores' },
+  { id: 'OperadorInventario', nombre: 'OperadorInventario', etiqueta: 'Operador de inventario', detalle: 'Catálogo de productos y conteos de stock' },
+  { id: 'OperadorLogistica', nombre: 'OperadorLogistica', etiqueta: 'Operador de logística', detalle: 'Movimientos de stock y ubicaciones' },
 ];
 
 /**
- * Obtiene usuarios con paginación desde el nuevo backend SGCS v2
- * GET /api/User?Page=1&PageSize=20
- * Retorna arreglo compatible con Array.isArray(res) y con res.items/totalCount/totalPages
+ * Obtiene la etiqueta legible y detalle descriptivo de un rol a partir de su identificador.
  */
-export async function obtenerUsuarios(params = { page: 1, pageSize: 20 }) {
-  const query = {
-    Page: params.page ?? 1,
-    PageSize: params.pageSize ?? 20,
-  };
+export function obtenerInfoRol(nombre = '') {
+  if (!nombre) return { etiqueta: 'Usuario', detalle: '' };
+  const normalizar = (str) =>
+    String(str)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f\s_-]/g, '')
+      .toLowerCase();
 
-  if (params.search || params.Search) {
-    query.Search = (params.search || params.Search).trim();
+  const clave = normalizar(nombre);
+  if (clave === 'administrador') {
+    return ROLES_DISPONIBLES[0];
   }
 
-  const response = await api.get('/api/User', { params: query });
-  const data = response.data;
-  const rawItems = Array.isArray(data) ? data : (data?.items || []);
+  const encontrado = ROLES_DISPONIBLES.find((r) => normalizar(r.id) === clave);
+  return encontrado || { id: nombre, nombre, etiqueta: nombre, detalle: '' };
+}
 
-  const items = rawItems.map((u) => ({
-    ...u,
-    idUsuario: u.idUsuario || u.id,
-    nombreUsuario: u.nombreUsuario || u.userName,
-    nombre: u.nombre || u.firstName,
-    apellido: u.apellido || u.lastName,
-    rol: u.rol || u.role,
-  }));
+function armarPayloadUsuario(usuario = {}) {
+  return {
+    userName: limpiarTexto(usuario.userName),
+    firstName: limpiarTexto(usuario.firstName),
+    lastName: limpiarTexto(usuario.lastName),
+    email: limpiarTextoOpcional(usuario.email),
+    phoneNumber: limpiarTextoOpcional(usuario.phoneNumber),
+    role: usuario.role || 'Encargado',
+  };
+}
 
-  items.totalCount = data?.totalCount ?? items.length;
-  items.totalPages = data?.totalPages ?? 1;
-  items.pageNumber = data?.pageNumber ?? query.Page;
-  items.items = items;
+/**
+ * Obtiene usuarios con paginación desde la API SGCS
+ * GET /api/User?Page=1&PageSize=20
+ */
+export async function obtenerUsuarios(params = {}) {
+  const query = armarParametrosPaginados(params, 20);
+  const { data } = await api.get(ENDPOINT, { params: query });
 
-  return items;
+  return normalizarRespuestaPaginada(data, query.Page);
 }
 
 export async function obtenerUsuarioPorId(id) {
-  const response = await api.get(`/api/User/${id}`);
-  return response.data;
+  const { data } = await api.get(`${ENDPOINT}/${id}`);
+  return data;
 }
 
 export async function altaUsuario(usuario) {
-  // CreateUserCommand espera: { userName, password, firstName, lastName, email, phoneNumber, role }
   const payload = {
-    userName: (usuario.userName || usuario.nombreUsuario || '').trim(),
+    ...armarPayloadUsuario(usuario),
     password: usuario.password,
-    firstName: (usuario.firstName || usuario.nombre || '').trim(),
-    lastName: (usuario.lastName || usuario.apellido || '').trim(),
-    email: usuario.email ? usuario.email.trim() : null,
-    phoneNumber: usuario.phoneNumber || usuario.telefono ? (usuario.phoneNumber || usuario.telefono).trim() : null,
-    role: usuario.role || usuario.rol || usuario.idRol || 'Encargado',
   };
 
-  const response = await api.post('/api/User', payload);
-  return response.data;
+  const { data } = await api.post(ENDPOINT, payload);
+  return data;
 }
 
 export async function modificarUsuario(id, usuario) {
-  // UpdateUserRequest espera: { userName, firstName, lastName, email, phoneNumber, role }
-  const payload = {
-    userName: (usuario.userName || usuario.nombreUsuario || '').trim(),
-    firstName: (usuario.firstName || usuario.nombre || '').trim(),
-    lastName: (usuario.lastName || usuario.apellido || '').trim(),
-    email: usuario.email ? usuario.email.trim() : null,
-    phoneNumber: usuario.phoneNumber || usuario.telefono ? (usuario.phoneNumber || usuario.telefono).trim() : null,
-    role: usuario.role || usuario.rol || usuario.idRol || 'Encargado',
-  };
-
-  const response = await api.put(`/api/User/${id}`, payload);
-  return response.data;
+  const { data } = await api.put(`${ENDPOINT}/${id}`, armarPayloadUsuario(usuario));
+  return data;
 }
 
 export async function eliminarUsuario(id) {
-  const response = await api.delete(`/api/User/${id}`);
-  return response.data;
+  const { data } = await api.delete(`${ENDPOINT}/${id}`);
+  return data;
 }
 
 export async function restaurarUsuario(id) {
-  const response = await api.post(`/api/User/${id}/restore`);
-  return response.data;
+  const { data } = await api.post(`${ENDPOINT}/${id}/restore`);
+  return data;
 }
 
 export async function resetPasswordUsuario(id, newPassword) {
-  const response = await api.post(`/api/User/${id}/reset-password`, {
+  const { data } = await api.post(`${ENDPOINT}/${id}/reset-password`, {
     newPassword,
   });
-  return response.data;
+  return data;
 }
 
 export async function obtenerRoles() {

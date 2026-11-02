@@ -1,4 +1,13 @@
-import api from './api';
+import api, { limpiarTexto } from './api';
+
+const ENDPOINT = '/api/Categoria';
+
+function armarPayloadCategoria(dto = {}) {
+  return {
+    nombre: limpiarTexto(dto.nombre),
+    idPadre: dto.idPadre || null,
+  };
+}
 
 /**
  * Obtiene el listado de categorías desde la API SGCS
@@ -9,42 +18,31 @@ export async function obtenerCategorias(params = {}) {
   if (params.idPadre) query.idPadre = params.idPadre;
   if (params.soloPrincipales) query.soloPrincipales = true;
 
-  const response = await api.get('/api/Categoria', { params: query });
-  return Array.isArray(response.data) ? response.data : [];
+  const { data } = await api.get(ENDPOINT, { params: query });
+  return Array.isArray(data) ? data : [];
 }
 
 export async function obtenerCategoriasTree() {
-  const response = await api.get('/api/Categoria/tree');
-  return Array.isArray(response.data) ? response.data : [];
+  const { data } = await api.get(`${ENDPOINT}/tree`);
+  return Array.isArray(data) ? data : [];
 }
 
 export async function obtenerCategoriaPorId(id) {
-  const response = await api.get(`/api/Categoria/${id}`);
-  return response.data;
+  const { data } = await api.get(`${ENDPOINT}/${id}`);
+  return data;
 }
 
 export async function altaCategoria(dto) {
-  const payload = {
-    nombre: (dto.nombre || '').trim(),
-    idPadre: dto.idPadre || null,
-  };
-
-  const response = await api.post('/api/Categoria', payload);
-  return response.data;
+  const { data } = await api.post(ENDPOINT, armarPayloadCategoria(dto));
+  return data;
 }
 
 export async function modificarCategoria(id, dto) {
-  const payload = {
-    nombre: (dto.nombre || '').trim(),
-    idPadre: dto.idPadre || null,
-  };
-
-  const response = await api.put(`/api/Categoria/${id}`, payload);
-  return response.data;
+  const { data } = await api.put(`${ENDPOINT}/${id}`, armarPayloadCategoria(dto));
+  return data;
 }
 
 export async function eliminarCategoria(id) {
-  const response = await api.delete(`/api/Categoria/${id}`);
-  return response.data;
+  const { data } = await api.delete(`${ENDPOINT}/${id}`);
+  return data;
 }
-

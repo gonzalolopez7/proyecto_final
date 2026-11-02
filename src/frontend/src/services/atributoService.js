@@ -1,90 +1,63 @@
-import api from './api';
+import api, { limpiarTexto } from './api';
+
+/**
+ * Crea las operaciones CRUD estándar para un catálogo de atributo simple ({ id, nombre }).
+ */
+function crearServicioAtributo(recurso) {
+  const endpoint = `/api/${recurso}`;
+
+  return {
+    obtenerTodos: async () => {
+      const { data } = await api.get(endpoint);
+      return Array.isArray(data) ? data : [];
+    },
+    alta: async (nombre) => {
+      const { data } = await api.post(endpoint, { nombre: limpiarTexto(nombre) });
+      return data;
+    },
+    modificar: async (id, nombre) => {
+      const { data } = await api.put(`${endpoint}/${id}`, { nombre: limpiarTexto(nombre) });
+      return data;
+    },
+    eliminar: async (id) => {
+      const { data } = await api.delete(`${endpoint}/${id}`);
+      return data;
+    },
+  };
+}
+
+const generoService = crearServicioAtributo('Genero');
+const temporadaService = crearServicioAtributo('Temporada');
+const fitService = crearServicioAtributo('Fit');
+const materialService = crearServicioAtributo('Material');
+
+export const SERVICIOS_ATRIBUTO = {
+  generos: generoService,
+  temporadas: temporadaService,
+  fits: fitService,
+  materiales: materialService,
+};
 
 // ==================== GÉNEROS ====================
-
-export async function obtenerGeneros() {
-  const response = await api.get('/api/Genero');
-  return Array.isArray(response.data) ? response.data : [];
-}
-
-export async function altaGenero(nombre) {
-  const response = await api.post('/api/Genero', { nombre: (nombre || '').trim() });
-  return response.data;
-}
-
-export async function modificarGenero(id, nombre) {
-  const response = await api.put(`/api/Genero/${id}`, { nombre: (nombre || '').trim() });
-  return response.data;
-}
-
-export async function eliminarGenero(id) {
-  const response = await api.delete(`/api/Genero/${id}`);
-  return response.data;
-}
+export const obtenerGeneros = generoService.obtenerTodos;
+export const altaGenero = generoService.alta;
+export const modificarGenero = generoService.modificar;
+export const eliminarGenero = generoService.eliminar;
 
 // ==================== TEMPORADAS ====================
-
-export async function obtenerTemporadas() {
-  const response = await api.get('/api/Temporada');
-  return Array.isArray(response.data) ? response.data : [];
-}
-
-export async function altaTemporada(nombre) {
-  const response = await api.post('/api/Temporada', { nombre: (nombre || '').trim() });
-  return response.data;
-}
-
-export async function modificarTemporada(id, nombre) {
-  const response = await api.put(`/api/Temporada/${id}`, { nombre: (nombre || '').trim() });
-  return response.data;
-}
-
-export async function eliminarTemporada(id) {
-  const response = await api.delete(`/api/Temporada/${id}`);
-  return response.data;
-}
+export const obtenerTemporadas = temporadaService.obtenerTodos;
+export const altaTemporada = temporadaService.alta;
+export const modificarTemporada = temporadaService.modificar;
+export const eliminarTemporada = temporadaService.eliminar;
 
 // ==================== FITS ====================
-
-export async function obtenerFits() {
-  const response = await api.get('/api/Fit');
-  return Array.isArray(response.data) ? response.data : [];
-}
-
-export async function altaFit(nombre) {
-  const response = await api.post('/api/Fit', { nombre: (nombre || '').trim() });
-  return response.data;
-}
-
-export async function modificarFit(id, nombre) {
-  const response = await api.put(`/api/Fit/${id}`, { nombre: (nombre || '').trim() });
-  return response.data;
-}
-
-export async function eliminarFit(id) {
-  const response = await api.delete(`/api/Fit/${id}`);
-  return response.data;
-}
+export const obtenerFits = fitService.obtenerTodos;
+export const altaFit = fitService.alta;
+export const modificarFit = fitService.modificar;
+export const eliminarFit = fitService.eliminar;
 
 // ==================== MATERIALES ====================
-
-export async function obtenerMateriales() {
-  const response = await api.get('/api/Material');
-  return Array.isArray(response.data) ? response.data : [];
-}
-
-export async function altaMaterial(nombre) {
-  const response = await api.post('/api/Material', { nombre: (nombre || '').trim() });
-  return response.data;
-}
-
-export async function modificarMaterial(id, nombre) {
-  const response = await api.put(`/api/Material/${id}`, { nombre: (nombre || '').trim() });
-  return response.data;
-}
-
-export async function eliminarMaterial(id) {
-  const response = await api.delete(`/api/Material/${id}`);
-  return response.data;
-}
-
+export const obtenerMateriales = materialService.obtenerTodos;
+export const altaMaterial = materialService.alta;
+export const modificarMaterial = materialService.modificar;
+export const eliminarMaterial = materialService.eliminar;

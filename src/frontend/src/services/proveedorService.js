@@ -1,87 +1,67 @@
-import api from './api';
+import api, {
+  limpiarTexto,
+  limpiarTextoOpcional,
+  armarParametrosPaginados,
+  normalizarRespuestaPaginada,
+} from './api';
+
+const ENDPOINT = '/api/Proveedor';
+
+function armarPayloadProveedor(dto = {}) {
+  return {
+    nombre: limpiarTexto(dto.nombre || dto.razonSocial),
+    razonSocial: limpiarTexto(dto.razonSocial || dto.nombre),
+    cuit: limpiarTexto(dto.cuit),
+    telefono: limpiarTextoOpcional(dto.telefono),
+    direccion: limpiarTextoOpcional(dto.direccion),
+    email: limpiarTextoOpcional(dto.email),
+    diasPago: Number(dto.diasPago ?? 0),
+    saldoInicial: Number(dto.saldoInicial ?? 0),
+  };
+}
 
 /**
- * Obtiene proveedores con paginación desde el nuevo backend SGCS v2
+ * Obtiene proveedores con paginación desde la API SGCS
  * GET /api/Proveedor?Page=1&PageSize=50
- * Retorna arreglo compatible con Array.isArray(res) y con res.items/totalCount/totalPages
  */
-export async function obtenerProveedores(params = { page: 1, pageSize: 50 }) {
-  const query = {
-    Page: params.page ?? params.Page ?? 1,
-    PageSize: params.pageSize ?? params.PageSize ?? 50,
-  };
-  if (params.search || params.Search) {
-    query.Search = (params.search || params.Search).trim();
-  }
-  const response = await api.get('/api/Proveedor', { params: query });
-  const data = response.data;
-  const rawItems = Array.isArray(data) ? data : (data?.items || []);
+export async function obtenerProveedores(params = {}) {
+  const query = armarParametrosPaginados(params, 50);
+  const { data } = await api.get(ENDPOINT, { params: query });
 
-  const items = rawItems.map((p) => ({
+  return normalizarRespuestaPaginada(data, query.Page, (p) => ({
     ...p,
-    idProveedor: p.idProveedor || p.id,
     razonSocial: p.razonSocial || p.nombre,
     nombre: p.nombre || p.razonSocial,
-    diasPago: p.diasPago ?? p.diasCondicionPago ?? 30,
-    diasCondicionPago: p.diasPago ?? p.diasCondicionPago ?? 30,
+    diasPago: p.diasPago ?? 30,
   }));
-
-  items.totalCount = data?.totalCount ?? items.length;
-  items.totalPages = data?.totalPages ?? 1;
-  items.pageNumber = data?.pageNumber ?? query.Page;
-  items.items = items;
-
-  return items;
 }
 
 export async function obtenerProveedorPorId(id) {
-  const response = await api.get(`/api/Proveedor/${id}`);
-  return response.data;
+  const { data } = await api.get(`${ENDPOINT}/${id}`);
+  return data;
 }
 
 export async function obtenerProveedorPorCuit(cuit) {
-  const response = await api.get(`/api/Proveedor/by-cuit/${encodeURIComponent(cuit)}`);
-  return response.data;
+  const { data } = await api.get(`${ENDPOINT}/by-cuit/${encodeURIComponent(cuit)}`);
+  return data;
 }
 
 export async function altaProveedor(dto) {
-  const payload = {
-    nombre: (dto.nombre || dto.razonSocial || '').trim(),
-    razonSocial: (dto.razonSocial || dto.nombre || '').trim(),
-    cuit: (dto.cuit || '').trim(),
-    telefono: dto.telefono ? String(dto.telefono).trim() : null,
-    direccion: dto.direccion ? String(dto.direccion).trim() : null,
-    email: dto.email ? String(dto.email).trim() : null,
-    diasPago: Number(dto.diasPago ?? dto.diasCondicionPago ?? 0),
-    saldoInicial: Number(dto.saldoInicial ?? 0),
-  };
-
-  const response = await api.post('/api/Proveedor', payload);
-  return response.data;
+  const { data } = await api.post(ENDPOINT, armarPayloadProveedor(dto));
+  return data;
 }
 
 export async function modificarProveedor(id, dto) {
-  const payload = {
-    nombre: (dto.nombre || dto.razonSocial || '').trim(),
-    razonSocial: (dto.razonSocial || dto.nombre || '').trim(),
-    cuit: (dto.cuit || '').trim(),
-    telefono: dto.telefono ? String(dto.telefono).trim() : null,
-    direccion: dto.direccion ? String(dto.direccion).trim() : null,
-    email: dto.email ? String(dto.email).trim() : null,
-    diasPago: Number(dto.diasPago ?? dto.diasCondicionPago ?? 0),
-    saldoInicial: Number(dto.saldoInicial ?? 0),
-  };
-
-  const response = await api.put(`/api/Proveedor/${id}`, payload);
-  return response.data;
+  const { data } = await api.put(`${ENDPOINT}/${id}`, armarPayloadProveedor(dto));
+  return data;
 }
 
 export async function eliminarProveedor(id) {
-  const response = await api.delete(`/api/Proveedor/${id}`);
-  return response.data;
+  const { data } = await api.delete(`${ENDPOINT}/${id}`);
+  return data;
 }
 
 export async function restaurarProveedor(id) {
-  const response = await api.post(`/api/Proveedor/${id}/restore`);
-  return response.data;
+  const { data } = await api.post(`${ENDPOINT}/${id}/restore`);
+  return data;
 }
