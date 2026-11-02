@@ -5,18 +5,11 @@ import {
   Search,
   Edit3,
   Trash2,
-  Check,
   X,
-  AlertTriangle,
   FolderTree,
   Tags,
-  Layers,
   RotateCcw,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  Sparkles,
-  RefreshCcw
+  RefreshCcw,
 } from 'lucide-react';
 import {
   obtenerProductos,
@@ -32,30 +25,70 @@ import {
   eliminarCategoria,
 } from '../services/categoriaService';
 import {
+  SERVICIOS_ATRIBUTO,
   obtenerGeneros,
-  altaGenero,
-  modificarGenero,
-  eliminarGenero,
   obtenerTemporadas,
-  altaTemporada,
-  modificarTemporada,
-  eliminarTemporada,
   obtenerFits,
-  altaFit,
-  modificarFit,
-  eliminarFit,
   obtenerMateriales,
-  altaMaterial,
-  modificarMaterial,
-  eliminarMaterial,
 } from '../services/atributoService';
-import { mensajeDeError, codigoDeError } from '../services/errores';
+import { mensajeDeError, codigoDeError, datosDeError } from '../services/errores';
+import AlertBanner from '../components/AlertBanner';
+import PaginationBar from '../components/PaginationBar';
+
+const PRODUCTO_INICIAL = {
+  nombre: '',
+  descripcion: '',
+  idCategoria: '',
+  idGenero: '',
+  idTemporada: '',
+  idFit: '',
+  idMaterial: '',
+};
+
+const CATEGORIA_INICIAL = {
+  nombre: '',
+  idPadre: '',
+};
+
+const ATRIBUTO_INICIAL = {
+  nombre: '',
+};
+
+const META_ATRIBUTO = {
+  generos: {
+    singular: 'género',
+    plural: 'Géneros',
+    nuevoLabel: 'Nuevo género',
+    campoLabel: 'Nombre del género',
+    placeholder: 'Ej. Masculino, Femenino, Unisex...',
+  },
+  temporadas: {
+    singular: 'temporada',
+    plural: 'Temporadas',
+    nuevoLabel: 'Nueva temporada',
+    campoLabel: 'Nombre de la temporada',
+    placeholder: 'Ej. Verano 2026, Invierno 2026...',
+  },
+  fits: {
+    singular: 'fit',
+    plural: 'Fits',
+    nuevoLabel: 'Nuevo fit',
+    campoLabel: 'Nombre del fit',
+    placeholder: 'Ej. Regular, Slim, Oversize...',
+  },
+  materiales: {
+    singular: 'material',
+    plural: 'Materiales',
+    nuevoLabel: 'Nuevo material',
+    campoLabel: 'Nombre del material',
+    placeholder: 'Ej. Algodón 100%, Lino, Denim...',
+  },
+};
+
+const TAMANO_PAGINA = 12;
 
 export default function Productos() {
-  // Pestaña principal: 'productos' | 'categorias' | 'atributos'
   const [pestanaActiva, setPestanaActiva] = useState('productos');
-
-  // Mensajes globales de feedback
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
 
@@ -66,9 +99,7 @@ export default function Productos() {
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [productoRestaurable, setProductoRestaurable] = useState(null);
 
-  // Paginación y filtros de productos
   const [pagina, setPagina] = useState(1);
-  const [tamanoPagina] = useState(12);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -79,60 +110,40 @@ export default function Productos() {
   const [filtroFit, setFiltroFit] = useState('');
   const [filtroMaterial, setFiltroMaterial] = useState('');
 
-  // Modal Producto
   const [modalProductoAbierto, setModalProductoAbierto] = useState(false);
   const [editandoProductoId, setEditandoProductoId] = useState(null);
   const [guardandoProducto, setGuardandoProducto] = useState(false);
-  const [formProducto, setFormProducto] = useState({
-    nombre: '',
-    descripcion: '',
-    idCategoria: '',
-    idGenero: '',
-    idTemporada: '',
-    idFit: '',
-    idMaterial: '',
-  });
+  const [formProducto, setFormProducto] = useState(PRODUCTO_INICIAL);
 
   // ==========================================
   // ESTADOS: CATEGORÍAS
   // ==========================================
   const [categorias, setCategorias] = useState([]);
-  const [loadingCategorias, setLoadingCategorias] = useState(false);
   const [busquedaCategoria, setBusquedaCategoria] = useState('');
 
-  // Modal Categoría
   const [modalCategoriaAbierto, setModalCategoriaAbierto] = useState(false);
   const [editandoCategoriaId, setEditandoCategoriaId] = useState(null);
   const [guardandoCategoria, setGuardandoCategoria] = useState(false);
-  const [formCategoria, setFormCategoria] = useState({
-    nombre: '',
-    idPadre: '',
-  });
+  const [formCategoria, setFormCategoria] = useState(CATEGORIA_INICIAL);
 
   // ==========================================
   // ESTADOS: ATRIBUTOS (GÉNERO, TEMPORADA, FIT, MATERIAL)
   // ==========================================
-  const [tipoAtributo, setTipoAtributo] = useState('generos'); // 'generos' | 'temporadas' | 'fits' | 'materiales'
+  const [tipoAtributo, setTipoAtributo] = useState('generos');
   const [generos, setGeneros] = useState([]);
   const [temporadas, setTemporadas] = useState([]);
   const [fits, setFits] = useState([]);
   const [materiales, setMateriales] = useState([]);
-  const [loadingAtributos, setLoadingAtributos] = useState(false);
   const [busquedaAtributo, setBusquedaAtributo] = useState('');
 
-  // Modal Atributo
   const [modalAtributoAbierto, setModalAtributoAbierto] = useState(false);
   const [editandoAtributoId, setEditandoAtributoId] = useState(null);
   const [guardandoAtributo, setGuardandoAtributo] = useState(false);
-  const [formAtributo, setFormAtributo] = useState({
-    nombre: '',
-  });
+  const [formAtributo, setFormAtributo] = useState(ATRIBUTO_INICIAL);
 
   // ==========================================
   // CARGAS DE DATOS
   // ==========================================
-
-  // Cargar Catálogos maestros (Categorías y Atributos para selects)
   const cargarCatalogosMaestros = useCallback(async () => {
     try {
       const [cats, gens, temps, fts, mats] = await Promise.all([
@@ -152,60 +163,111 @@ export default function Productos() {
     }
   }, []);
 
-  // Cargar Productos paginados
   const cargarProductos = useCallback(async (pag = 1) => {
     try {
       setLoadingProductos(true);
       setError('');
       setProductoRestaurable(null);
 
-      const params = {
+      const data = await obtenerProductos({
         page: pag,
-        pageSize: tamanoPagina,
+        pageSize: TAMANO_PAGINA,
         search: busqueda,
         idCategoria: filtroCategoria,
         idGenero: filtroGenero,
         idTemporada: filtroTemporada,
         idFit: filtroFit,
         idMaterial: filtroMaterial,
-      };
+      });
 
-      const data = await obtenerProductos(params);
-      setProductos(data.items || []);
-      setTotalPaginas(data.totalPages || 1);
-      setTotalItems(data.totalCount || 0);
+      setProductos(data.items);
+      setTotalPaginas(data.totalPages);
+      setTotalItems(data.totalCount);
     } catch (err) {
       console.error(err);
       setError(mensajeDeError(err, 'No se pudieron cargar los productos.'));
     } finally {
       setLoadingProductos(false);
     }
-  }, [tamanoPagina, busqueda, filtroCategoria, filtroGenero, filtroTemporada, filtroFit, filtroMaterial]);
-
-  // Carga inicial
-  useEffect(() => {
-    cargarCatalogosMaestros();
-  }, [cargarCatalogosMaestros]);
+  }, [busqueda, filtroCategoria, filtroGenero, filtroTemporada, filtroFit, filtroMaterial]);
 
   useEffect(() => {
-    cargarProductos(pagina);
-  }, [cargarProductos, pagina]);
+    let activo = true;
+
+    async function inicializarCatalogos() {
+      try {
+        const [cats, gens, temps, fts, mats] = await Promise.all([
+          obtenerCategorias(),
+          obtenerGeneros(),
+          obtenerTemporadas(),
+          obtenerFits(),
+          obtenerMateriales(),
+        ]);
+        if (!activo) return;
+        setCategorias(cats);
+        setGeneros(gens);
+        setTemporadas(temps);
+        setFits(fts);
+        setMateriales(mats);
+      } catch (err) {
+        console.error('Error al cargar catálogos auxiliares:', err);
+      }
+    }
+
+    inicializarCatalogos();
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let activo = true;
+
+    async function inicializarProductos() {
+      try {
+        setLoadingProductos(true);
+        setError('');
+        setProductoRestaurable(null);
+
+        const data = await obtenerProductos({
+          page: pagina,
+          pageSize: TAMANO_PAGINA,
+          search: busqueda,
+          idCategoria: filtroCategoria,
+          idGenero: filtroGenero,
+          idTemporada: filtroTemporada,
+          idFit: filtroFit,
+          idMaterial: filtroMaterial,
+        });
+
+        if (!activo) return;
+        setProductos(data.items);
+        setTotalPaginas(data.totalPages);
+        setTotalItems(data.totalCount);
+      } catch (err) {
+        if (!activo) return;
+        console.error(err);
+        setError(mensajeDeError(err, 'No se pudieron cargar los productos.'));
+      } finally {
+        if (activo) setLoadingProductos(false);
+      }
+    }
+
+    inicializarProductos();
+    return () => {
+      activo = false;
+    };
+  }, [pagina, busqueda, filtroCategoria, filtroGenero, filtroTemporada, filtroFit, filtroMaterial]);
 
   // ==========================================
   // ACCIONES: PRODUCTOS
   // ==========================================
-
   function abrirNuevoProducto() {
     setEditandoProductoId(null);
     const primerHoja = categorias.find((c) => !categorias.some((sub) => sub.idPadre === c.id));
     setFormProducto({
-      nombre: '',
-      descripcion: '',
+      ...PRODUCTO_INICIAL,
       idCategoria: primerHoja ? primerHoja.id : '',
-      idGenero: '',
-      idTemporada: '',
-      idFit: '',
-      idMaterial: '',
     });
     setProductoRestaurable(null);
     setError('');
@@ -261,7 +323,7 @@ export default function Productos() {
     } catch (err) {
       console.error(err);
       const cod = codigoDeError(err);
-      const data = err.response?.data;
+      const data = datosDeError(err);
       if (cod === 'Producto.SoftDeletedName') {
         const idBaja = data?.id || data?.extensions?.id;
         const nombreBaja = data?.nombre || data?.extensions?.nombre || formProducto.nombre;
@@ -306,13 +368,9 @@ export default function Productos() {
   // ==========================================
   // ACCIONES: CATEGORÍAS
   // ==========================================
-
   function abrirNuevaCategoria() {
     setEditandoCategoriaId(null);
-    setFormCategoria({
-      nombre: '',
-      idPadre: '',
-    });
+    setFormCategoria(CATEGORIA_INICIAL);
     setError('');
     setModalCategoriaAbierto(true);
   }
@@ -376,15 +434,17 @@ export default function Productos() {
   const categoriasFiltradas = useMemo(() => {
     if (!busquedaCategoria.trim()) return categorias;
     const txt = busquedaCategoria.toLowerCase();
-    return categorias.filter((c) =>
-      c.nombre?.toLowerCase().includes(txt) ||
-      c.padreNombre?.toLowerCase().includes(txt)
+    return categorias.filter(
+      (c) =>
+        c.nombre?.toLowerCase().includes(txt) ||
+        c.padreNombre?.toLowerCase().includes(txt)
     );
   }, [categorias, busquedaCategoria]);
 
   // ==========================================
   // ACCIONES: ATRIBUTOS
   // ==========================================
+  const metaAtributo = META_ATRIBUTO[tipoAtributo] || META_ATRIBUTO.generos;
 
   const listaAtributosActual = useMemo(() => {
     switch (tipoAtributo) {
@@ -402,9 +462,19 @@ export default function Productos() {
     return listaAtributosActual.filter((a) => a.nombre?.toLowerCase().includes(txt));
   }, [listaAtributosActual, busquedaAtributo]);
 
+  async function recargarAtributoActual(tipo) {
+    const servicio = SERVICIOS_ATRIBUTO[tipo];
+    if (!servicio) return;
+    const actualizados = await servicio.obtenerTodos();
+    if (tipo === 'generos') setGeneros(actualizados);
+    else if (tipo === 'temporadas') setTemporadas(actualizados);
+    else if (tipo === 'fits') setFits(actualizados);
+    else if (tipo === 'materiales') setMateriales(actualizados);
+  }
+
   function abrirNuevoAtributo() {
     setEditandoAtributoId(null);
-    setFormAtributo({ nombre: '' });
+    setFormAtributo(ATRIBUTO_INICIAL);
     setError('');
     setModalAtributoAbierto(true);
   }
@@ -423,28 +493,20 @@ export default function Productos() {
       return;
     }
 
+    const servicio = SERVICIOS_ATRIBUTO[tipoAtributo];
+    if (!servicio) return;
+
     try {
       setGuardandoAtributo(true);
       setError('');
 
-      if (tipoAtributo === 'generos') {
-        if (editandoAtributoId) await modificarGenero(editandoAtributoId, formAtributo.nombre);
-        else await altaGenero(formAtributo.nombre);
-        setGeneros(await obtenerGeneros());
-      } else if (tipoAtributo === 'temporadas') {
-        if (editandoAtributoId) await modificarTemporada(editandoAtributoId, formAtributo.nombre);
-        else await altaTemporada(formAtributo.nombre);
-        setTemporadas(await obtenerTemporadas());
-      } else if (tipoAtributo === 'fits') {
-        if (editandoAtributoId) await modificarFit(editandoAtributoId, formAtributo.nombre);
-        else await altaFit(formAtributo.nombre);
-        setFits(await obtenerFits());
-      } else if (tipoAtributo === 'materiales') {
-        if (editandoAtributoId) await modificarMaterial(editandoAtributoId, formAtributo.nombre);
-        else await altaMaterial(formAtributo.nombre);
-        setMateriales(await obtenerMateriales());
+      if (editandoAtributoId) {
+        await servicio.modificar(editandoAtributoId, formAtributo.nombre);
+      } else {
+        await servicio.alta(formAtributo.nombre);
       }
 
+      await recargarAtributoActual(tipoAtributo);
       setMensaje('Atributo guardado exitosamente.');
       setModalAtributoAbierto(false);
       await cargarProductos(pagina);
@@ -458,22 +520,13 @@ export default function Productos() {
 
   async function handleEliminarAtributo(id, nombre) {
     if (!window.confirm(`¿Seguro que desea eliminar "${nombre}"?`)) return;
+    const servicio = SERVICIOS_ATRIBUTO[tipoAtributo];
+    if (!servicio) return;
+
     try {
       setError('');
-      if (tipoAtributo === 'generos') {
-        await eliminarGenero(id);
-        setGeneros(await obtenerGeneros());
-      } else if (tipoAtributo === 'temporadas') {
-        await eliminarTemporada(id);
-        setTemporadas(await obtenerTemporadas());
-      } else if (tipoAtributo === 'fits') {
-        await eliminarFit(id);
-        setFits(await obtenerFits());
-      } else if (tipoAtributo === 'materiales') {
-        await eliminarMaterial(id);
-        setMateriales(await obtenerMateriales());
-      }
-
+      await servicio.eliminar(id);
+      await recargarAtributoActual(tipoAtributo);
       setMensaje(`Atributo "${nombre}" eliminado correctamente.`);
       await cargarProductos(pagina);
     } catch (err) {
@@ -482,15 +535,19 @@ export default function Productos() {
     }
   }
 
-  const tituloAtributoSingular = useMemo(() => {
-    switch (tipoAtributo) {
-      case 'generos': return 'género';
-      case 'temporadas': return 'temporada';
-      case 'fits': return 'fit';
-      case 'materiales': return 'material';
-      default: return 'atributo';
-    }
-  }, [tipoAtributo]);
+  const hayFiltrosActivos = Boolean(
+    filtroCategoria || filtroGenero || filtroTemporada || filtroFit || filtroMaterial
+  );
+
+  function limpiarFiltrosProductos() {
+    setBusqueda('');
+    setFiltroCategoria('');
+    setFiltroGenero('');
+    setFiltroTemporada('');
+    setFiltroFit('');
+    setFiltroMaterial('');
+    setPagina(1);
+  }
 
   return (
     <main className="view productos-view">
@@ -502,83 +559,78 @@ export default function Productos() {
           </p>
         </article>
 
-        {pestanaActiva === 'productos' && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-            <button type="button" className="btn btn-primary" onClick={abrirNuevoProducto}>
-              <Plus size={16} />
-              Nuevo producto
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => cargarProductos(pagina)}
-            >
-              <RefreshCcw size={16} />
-              Actualizar listado
-            </button>
-          </div>
-        )}
+        <div className="page-head-actions">
+          {pestanaActiva === 'productos' && (
+            <>
+              <button type="button" className="btn btn-primary" onClick={abrirNuevoProducto}>
+                <Plus size={16} />
+                Nuevo producto
+              </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => cargarProductos(pagina)}
+              >
+                <RefreshCcw size={16} />
+                Actualizar listado
+              </button>
+            </>
+          )}
 
-        {pestanaActiva === 'categorias' && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-            <button type="button" className="btn btn-primary" onClick={abrirNuevaCategoria}>
-              <Plus size={16} />
-              Nueva categoría
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => cargarCatalogosMaestros()}
-            >
-              <RefreshCcw size={16} />
-              Actualizar listado
-            </button>
-          </div>
-        )}
+          {pestanaActiva === 'categorias' && (
+            <>
+              <button type="button" className="btn btn-primary" onClick={abrirNuevaCategoria}>
+                <Plus size={16} />
+                Nueva categoría
+              </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={cargarCatalogosMaestros}
+              >
+                <RefreshCcw size={16} />
+                Actualizar listado
+              </button>
+            </>
+          )}
 
-        {pestanaActiva === 'atributos' && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-            <button type="button" className="btn btn-primary" onClick={abrirNuevoAtributo}>
-              <Plus size={16} />
-              {tituloAtributoSingular === 'temporada' ? 'Nueva temporada' : `Nuevo ${tituloAtributoSingular}`}
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => cargarCatalogosMaestros()}
-            >
-              <RefreshCcw size={16} />
-              Actualizar listado
-            </button>
-          </div>
-        )}
+          {pestanaActiva === 'atributos' && (
+            <>
+              <button type="button" className="btn btn-primary" onClick={abrirNuevoAtributo}>
+                <Plus size={16} />
+                {metaAtributo.nuevoLabel}
+              </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={cargarCatalogosMaestros}
+              >
+                <RefreshCcw size={16} />
+                Actualizar listado
+              </button>
+            </>
+          )}
+        </div>
       </header>
 
-      {/* Alertas Globales */}
-      {mensaje && (
-        <div className="alert-banner alert-success">
-          <Check size={18} />
-          <span>{mensaje}</span>
-          <button type="button" onClick={() => setMensaje('')} className="btn-close-alert">
-            <X size={14} />
-          </button>
-        </div>
-      )}
-      {error && !modalProductoAbierto && !modalCategoriaAbierto && !modalAtributoAbierto && (
-        <div className="alert-banner alert-danger">
-          <AlertTriangle size={18} />
-          <span>{error}</span>
-          <button type="button" onClick={() => setError('')} className="btn-close-alert">
-            <X size={14} />
-          </button>
-        </div>
+      <AlertBanner
+        tipo="success"
+        mensaje={mensaje}
+        onClose={() => setMensaje('')}
+      />
+      {!modalProductoAbierto && !modalCategoriaAbierto && !modalAtributoAbierto && (
+        <AlertBanner
+          tipo="danger"
+          mensaje={error}
+          onClose={() => setError('')}
+        />
       )}
 
       {/* Selector de Pestañas Superiores */}
-      <nav className="compras-tabs" style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-line, #CBD5E1)', paddingBottom: '8px' }}>
+      <nav className="compras-tabs">
         <button
           type="button"
-          className={`btn ${pestanaActiva === 'productos' ? 'btn-primary' : ''}`}
+          className={`btn${pestanaActiva === 'productos' ? ' btn-primary' : ''}`}
           onClick={() => { setPestanaActiva('productos'); setError(''); }}
         >
           <Shirt size={16} />
@@ -586,7 +638,7 @@ export default function Productos() {
         </button>
         <button
           type="button"
-          className={`btn ${pestanaActiva === 'categorias' ? 'btn-primary' : ''}`}
+          className={`btn${pestanaActiva === 'categorias' ? ' btn-primary' : ''}`}
           onClick={() => { setPestanaActiva('categorias'); setError(''); }}
         >
           <FolderTree size={16} />
@@ -594,7 +646,7 @@ export default function Productos() {
         </button>
         <button
           type="button"
-          className={`btn ${pestanaActiva === 'atributos' ? 'btn-primary' : ''}`}
+          className={`btn${pestanaActiva === 'atributos' ? ' btn-primary' : ''}`}
           onClick={() => { setPestanaActiva('atributos'); setError(''); }}
         >
           <Tags size={16} />
@@ -607,15 +659,12 @@ export default function Productos() {
           ========================================================= */}
       {pestanaActiva === 'productos' && (
         <>
-          {/* Filtros de Productos */}
-          <section className="catalog-filters" style={{ marginBottom: '16px' }}>
-            <div className="filter-controls" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-
-              {/* Filtro por Categoría */}
+          <section className="catalog-filters">
+            <div className="filter-controls">
               <select
+                className="select-filter"
                 value={filtroCategoria}
                 onChange={(e) => { setFiltroCategoria(e.target.value); setPagina(1); }}
-                style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-line)', fontSize: '13px', background: '#fff' }}
               >
                 <option value="">Todas las categorías</option>
                 {categorias.map((c) => (
@@ -623,11 +672,10 @@ export default function Productos() {
                 ))}
               </select>
 
-              {/* Filtro por Género */}
               <select
+                className="select-filter"
                 value={filtroGenero}
                 onChange={(e) => { setFiltroGenero(e.target.value); setPagina(1); }}
-                style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-line)', fontSize: '13px', background: '#fff' }}
               >
                 <option value="">Todos los géneros</option>
                 {generos.map((g) => (
@@ -635,11 +683,10 @@ export default function Productos() {
                 ))}
               </select>
 
-              {/* Filtro por Temporada */}
               <select
+                className="select-filter"
                 value={filtroTemporada}
                 onChange={(e) => { setFiltroTemporada(e.target.value); setPagina(1); }}
-                style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-line)', fontSize: '13px', background: '#fff' }}
               >
                 <option value="">Todas las temporadas</option>
                 {temporadas.map((t) => (
@@ -647,11 +694,10 @@ export default function Productos() {
                 ))}
               </select>
 
-              {/* Filtro por Fit */}
               <select
+                className="select-filter"
                 value={filtroFit}
                 onChange={(e) => { setFiltroFit(e.target.value); setPagina(1); }}
-                style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-line)', fontSize: '13px', background: '#fff' }}
               >
                 <option value="">Todos los fits</option>
                 {fits.map((f) => (
@@ -659,11 +705,10 @@ export default function Productos() {
                 ))}
               </select>
 
-              {/* Filtro por Material */}
               <select
+                className="select-filter"
                 value={filtroMaterial}
                 onChange={(e) => { setFiltroMaterial(e.target.value); setPagina(1); }}
-                style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-line)', fontSize: '13px', background: '#fff' }}
               >
                 <option value="">Todos los materiales</option>
                 {materiales.map((m) => (
@@ -671,19 +716,11 @@ export default function Productos() {
                 ))}
               </select>
 
-              {(filtroCategoria || filtroGenero || filtroTemporada || filtroFit || filtroMaterial) && (
+              {hayFiltrosActivos && (
                 <button
                   type="button"
                   className="btn btn-small"
-                  onClick={() => {
-                    setBusqueda('');
-                    setFiltroCategoria('');
-                    setFiltroGenero('');
-                    setFiltroTemporada('');
-                    setFiltroFit('');
-                    setFiltroMaterial('');
-                    setPagina(1);
-                  }}
+                  onClick={limpiarFiltrosProductos}
                   title="Limpiar filtros"
                 >
                   <X size={14} /> Limpiar filtros
@@ -692,16 +729,15 @@ export default function Productos() {
             </div>
           </section>
 
-          {/* Tabla de Productos */}
           <section className="card">
-            <header className="card-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <header className="card-head">
               <div>
                 <h2>
                   <Shirt size={18} />
                   Productos registrados ({totalItems})
                 </h2>
               </div>
-              <div className="filter-search-box" style={{ maxWidth: '400px' }}>
+              <div className="filter-search-box">
                 <Search size={14} className="filter-icon" />
                 <input
                   type="text"
@@ -739,21 +775,21 @@ export default function Productos() {
                       {productos.map((prod) => (
                         <tr key={prod.id} className="table-row-hover">
                           <th scope="row" className="row-title">
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <strong style={{ fontSize: '14px', color: 'var(--ink, #0f172a)' }}>{prod.nombre}</strong>
-                              <span className="muted text-sm" style={{ fontWeight: 'normal', color: 'var(--ink-muted, #64748b)' }}>
+                            <div className="row-stack">
+                              <strong className="row-primary-text">{prod.nombre}</strong>
+                              <span className="row-secondary-text">
                                 {prod.descripcion}
                               </span>
                             </div>
                           </th>
                           <td>
-                            <span className="category-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '12px', fontSize: '12px' }}>
+                            <span className="category-pill category-pill-icon">
                               <FolderTree size={12} />
                               {prod.categoriaNombre}
                             </span>
                           </td>
                           <td>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            <div className="pill-list">
                               {prod.generoNombre && (
                                 <span className="category-pill" title="Género">
                                   {prod.generoNombre}
@@ -803,32 +839,13 @@ export default function Productos() {
                   </table>
                 </div>
 
-                {/* Paginación de Productos */}
-                {totalPaginas > 1 && (
-                  <footer className="pagination-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderTop: '1px solid var(--border-color, #e2e8f0)' }}>
-                    <span className="muted text-sm">
-                      Página {pagina} de {totalPaginas} ({totalItems} productos en total)
-                    </span>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button
-                        type="button"
-                        className="btn btn-small"
-                        disabled={pagina <= 1}
-                        onClick={() => setPagina((p) => Math.max(1, p - 1))}
-                      >
-                        <ChevronLeft size={14} /> Anterior
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-small"
-                        disabled={pagina >= totalPaginas}
-                        onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
-                      >
-                        Siguiente <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  </footer>
-                )}
+                <PaginationBar
+                  pagina={pagina}
+                  totalPaginas={totalPaginas}
+                  totalItems={totalItems}
+                  etiquetaItem="productos"
+                  onPageChange={setPagina}
+                />
               </>
             )}
           </section>
@@ -840,7 +857,7 @@ export default function Productos() {
           ========================================================= */}
       {pestanaActiva === 'categorias' && (
         <section className="card">
-          <header className="card-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <header className="card-head">
             <div>
               <h2>
                 <FolderTree size={18} />
@@ -848,7 +865,7 @@ export default function Productos() {
               </h2>
             </div>
 
-            <div className="filter-search-box" style={{ maxWidth: '400px' }}>
+            <div className="filter-search-box">
               <Search size={14} className="filter-icon" />
               <input
                 type="text"
@@ -883,11 +900,11 @@ export default function Productos() {
                       </th>
                       <td>
                         {cat.padreNombre ? (
-                          <span className="category-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '12px', fontSize: '12px', background: '#F1F5F9', color: '#334155' }}>
+                          <span className="category-pill category-pill-icon">
                             <FolderTree size={12} /> {cat.padreNombre}
                           </span>
                         ) : (
-                          <span className="category-pill" style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '12px', background: '#F1F5F9', color: '#334155', fontWeight: 'bold' }}>
+                          <span className="category-pill category-pill-strong">
                             Categoría principal
                           </span>
                         )}
@@ -924,15 +941,15 @@ export default function Productos() {
           ========================================================= */}
       {pestanaActiva === 'atributos' && (
         <section className="card">
-          <header className="card-head" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+          <header className="card-head">
             <div>
               <h2>
                 <Tags size={18} />
-                {tipoAtributo[0].toUpperCase() + tipoAtributo.slice(1)} ({listaAtributosActual.length})
+                {metaAtributo.plural} ({listaAtributosActual.length})
               </h2>
             </div>
 
-            <div className="filter-search-box" style={{ maxWidth: '400px' }}>
+            <div className="filter-search-box">
               <Search size={14} className="filter-icon" />
               <input
                 type="text"
@@ -943,32 +960,31 @@ export default function Productos() {
             </div>
           </header>
 
-          {/* Sub-selector de Atributo */}
-          <div style={{ display: 'flex', gap: '6px', padding: '12px 16px', background: '#F8FAFC', borderBottom: '1px solid var(--border-line)' }}>
+          <div className="sub-tabs-bar">
             <button
               type="button"
-              className={`btn btn-small ${tipoAtributo === 'generos' ? 'btn-primary' : ''}`}
+              className={`btn btn-small${tipoAtributo === 'generos' ? ' btn-primary' : ''}`}
               onClick={() => { setTipoAtributo('generos'); setBusquedaAtributo(''); }}
             >
               Géneros ({generos.length})
             </button>
             <button
               type="button"
-              className={`btn btn-small ${tipoAtributo === 'temporadas' ? 'btn-primary' : ''}`}
+              className={`btn btn-small${tipoAtributo === 'temporadas' ? ' btn-primary' : ''}`}
               onClick={() => { setTipoAtributo('temporadas'); setBusquedaAtributo(''); }}
             >
               Temporadas ({temporadas.length})
             </button>
             <button
               type="button"
-              className={`btn btn-small ${tipoAtributo === 'fits' ? 'btn-primary' : ''}`}
+              className={`btn btn-small${tipoAtributo === 'fits' ? ' btn-primary' : ''}`}
               onClick={() => { setTipoAtributo('fits'); setBusquedaAtributo(''); }}
             >
               Fits ({fits.length})
             </button>
             <button
               type="button"
-              className={`btn btn-small ${tipoAtributo === 'materiales' ? 'btn-primary' : ''}`}
+              className={`btn btn-small${tipoAtributo === 'materiales' ? ' btn-primary' : ''}`}
               onClick={() => { setTipoAtributo('materiales'); setBusquedaAtributo(''); }}
             >
               Materiales ({materiales.length})
@@ -979,18 +995,16 @@ export default function Productos() {
             <div className="empty-state">
               <Tags size={48} className="empty-icon" />
               <h3>No se encontraron registros de {tipoAtributo}</h3>
-              {tituloAtributoSingular === 'temporada' ? (
-                <p>Hacé clic en "Nueva temporada" para agregar el primer registro a este catálogo.</p>
-              ) : (
-                <p>Hacé clic en "Nuevo {tituloAtributoSingular}" para agregar el primer registro a este catálogo.</p>
-              )}
+              <p>Hacé clic en &quot;{metaAtributo.nuevoLabel}&quot; para agregar el primer registro a este catálogo.</p>
             </div>
           ) : (
             <div className="table-scroll">
               <table>
                 <thead>
                   <tr>
-                    <th scope="col" style={{ width: '90%' }}>NOMBRE DE {tituloAtributoSingular.toUpperCase()}</th>
+                    <th scope="col" className="col-wide">
+                      NOMBRE DE {metaAtributo.singular.toUpperCase()}
+                    </th>
                     <th scope="col" className="actions-header">ACCIONES</th>
                   </tr>
                 </thead>
@@ -1005,7 +1019,7 @@ export default function Productos() {
                           type="button"
                           className="btn btn-icon"
                           onClick={() => abrirEditarAtributo(item)}
-                          title={`Editar ${tituloAtributoSingular}`}
+                          title={`Editar ${metaAtributo.singular}`}
                         >
                           <Edit3 size={16} />
                         </button>
@@ -1013,7 +1027,7 @@ export default function Productos() {
                           type="button"
                           className="btn btn-icon danger"
                           onClick={() => handleEliminarAtributo(item.id, item.nombre)}
-                          title={`Eliminar ${tituloAtributoSingular}`}
+                          title={`Eliminar ${metaAtributo.singular}`}
                         >
                           <Trash2 size={16} />
                         </button>
@@ -1035,31 +1049,25 @@ export default function Productos() {
           <div className="modal-content modal-lg" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
               <h2>{editandoProductoId ? 'Modificar producto' : 'Nuevo producto'}</h2>
-              <button type="button" className="btn-close" onClick={() => setModalProductoAbierto(false)}>
+              <button type="button" className="btn-close" onClick={() => setModalProductoAbierto(false)} aria-label="Cerrar">
                 <X size={18} />
               </button>
             </header>
 
             <form onSubmit={handleGuardarProducto} className="modal-form">
-              {error && (
-                <div className="alert-banner alert-danger">
-                  <AlertTriangle size={16} />
-                  <div style={{ flex: 1 }}>
-                    <span>{error}</span>
-                    {productoRestaurable && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <button
-                          type="button"
-                          className="btn btn-small"
-                          onClick={() => handleRestaurarProducto(productoRestaurable.id, productoRestaurable.nombre)}
-                        >
-                          <RotateCcw size={14} /> Restaurar producto existente
-                        </button>
-                      </div>
-                    )}
+              <AlertBanner tipo="danger" mensaje={error}>
+                {productoRestaurable && (
+                  <div className="alert-restore-actions">
+                    <button
+                      type="button"
+                      className="btn btn-small"
+                      onClick={() => handleRestaurarProducto(productoRestaurable.id, productoRestaurable.nombre)}
+                    >
+                      <RotateCcw size={14} /> Restaurar producto existente
+                    </button>
                   </div>
-                </div>
-              )}
+                )}
+              </AlertBanner>
 
               <div className="form-row-2">
                 <label>
@@ -1102,7 +1110,6 @@ export default function Productos() {
                   onChange={(e) => setFormProducto({ ...formProducto, descripcion: e.target.value })}
                   placeholder="Detalles de diseño, composición, confección o acabados..."
                   required
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-line)', fontSize: '13.5px', resize: 'vertical' }}
                 />
               </label>
 
@@ -1183,18 +1190,13 @@ export default function Productos() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
               <h2>{editandoCategoriaId ? 'Modificar Categoría' : 'Nueva Categoría'}</h2>
-              <button type="button" className="btn-close" onClick={() => setModalCategoriaAbierto(false)}>
+              <button type="button" className="btn-close" onClick={() => setModalCategoriaAbierto(false)} aria-label="Cerrar">
                 <X size={18} />
               </button>
             </header>
 
             <form onSubmit={handleGuardarCategoria} className="modal-form">
-              {error && (
-                <div className="alert-banner alert-danger">
-                  <AlertTriangle size={16} />
-                  <span>{error}</span>
-                </div>
-              )}
+              <AlertBanner tipo="danger" mensaje={error} />
 
               <label>
                 Nombre de la categoría *
@@ -1246,33 +1248,23 @@ export default function Productos() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
               <h2>
-                {editandoAtributoId ? `Modificar ${tituloAtributoSingular}` : tituloAtributoSingular === 'temporada' ? 'Nueva temporada' : `Nuevo ${tituloAtributoSingular}`}
+                {editandoAtributoId ? `Modificar ${metaAtributo.singular}` : metaAtributo.nuevoLabel}
               </h2>
-              <button type="button" className="btn-close" onClick={() => setModalAtributoAbierto(false)}>
+              <button type="button" className="btn-close" onClick={() => setModalAtributoAbierto(false)} aria-label="Cerrar">
                 <X size={18} />
               </button>
             </header>
 
             <form onSubmit={handleGuardarAtributo} className="modal-form">
-              {error && (
-                <div className="alert-banner alert-danger">
-                  <AlertTriangle size={16} />
-                  <span>{error}</span>
-                </div>
-              )}
+              <AlertBanner tipo="danger" mensaje={error} />
 
               <label>
-                {tituloAtributoSingular === 'temporada' ? 'Nombre de la temporada' : `Nombre del ${tituloAtributoSingular}`} *
+                {metaAtributo.campoLabel} *
                 <input
                   type="text"
                   value={formAtributo.nombre}
                   onChange={(e) => setFormAtributo({ ...formAtributo, nombre: e.target.value })}
-                  placeholder={
-                    tipoAtributo === 'generos' ? 'Ej. Masculino, Femenino, Unisex...' :
-                      tipoAtributo === 'temporadas' ? 'Ej. Verano 2026, Invierno 2026...' :
-                        tipoAtributo === 'fits' ? 'Ej. Regular, Slim, Oversize...' :
-                          'Ej. Algodón 100%, Lino, Denim...'
-                  }
+                  placeholder={metaAtributo.placeholder}
                   required
                 />
               </label>
@@ -1292,4 +1284,3 @@ export default function Productos() {
     </main>
   );
 }
-

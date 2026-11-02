@@ -5,17 +5,13 @@ import {
   Search,
   Edit3,
   Trash2,
-  Check,
   X,
-  AlertTriangle,
   Shield,
   KeyRound,
   RotateCcw,
-  ChevronLeft,
-  ChevronRight,
   Phone,
   Mail,
-  RefreshCcw
+  RefreshCcw,
 } from 'lucide-react';
 import {
   obtenerUsuarios,
@@ -26,9 +22,12 @@ import {
   resetPasswordUsuario,
 } from '../services/usuarioService';
 import useRoles from '../hooks/useRoles';
-import { mensajeDeError, codigoDeError } from '../services/errores';
+import { mensajeDeError, codigoDeError, datosDeError } from '../services/errores';
+import { validarTelefono } from '../utils/validaciones';
+import AlertBanner from '../components/AlertBanner';
+import PaginationBar from '../components/PaginationBar';
 
-const usuarioInicial = {
+const USUARIO_INICIAL = {
   userName: '',
   firstName: '',
   lastName: '',
@@ -39,38 +38,31 @@ const usuarioInicial = {
   role: 'Encargado',
 };
 
-const ROL_INFO = {
-  admin: { etiqueta: 'Administrador', detalle: 'Acceso completo al sistema y gestión de usuarios' },
-  administrador: { etiqueta: 'Administrador', detalle: 'Acceso completo al sistema y gestión de usuarios' },
-  encargado: { etiqueta: 'Encargado', detalle: 'Gestión operativa, compras y proveedores' },
-  comprador: { etiqueta: 'Comprador', detalle: 'Gestión de órdenes de compra y proveedores' },
-  operadorinventario: { etiqueta: 'Operador de inventario', detalle: 'Catálogo de productos y conteos de stock' },
-  operadorlogistica: { etiqueta: 'Operador de logística', detalle: 'Movimientos de stock y ubicaciones' },
+const PASSWORD_RESET_INICIAL = {
+  id: null,
+  userName: '',
+  newPassword: '',
+  confirmPassword: '',
 };
 
-function infoRol(nombre = '') {
-  const clave = nombre.normalize('NFD').replace(/[\u0300-\u036f\s_-]/g, '').toLowerCase();
-  return ROL_INFO[clave] || { etiqueta: nombre, detalle: '' };
-}
+const TAMANO_PAGINA = 10;
 
 export default function Usuarios() {
-  const { roles, cargando: cargandoRoles, error: errorRoles, recargar: recargarRoles } = useRoles();
+  const { roles, obtenerInfoRol } = useRoles();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalPasswordAbierto, setModalPasswordAbierto] = useState(false);
   const [usuarios, setUsuarios] = useState([]);
-  const [form, setForm] = useState(usuarioInicial);
+  const [form, setForm] = useState(USUARIO_INICIAL);
   const [editandoId, setEditandoId] = useState(null);
-  const [passwordResetData, setPasswordResetData] = useState({ id: null, userName: '', newPassword: '', confirmPassword: '' });
+  const [passwordResetData, setPasswordResetData] = useState(PASSWORD_RESET_INICIAL);
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [usuarioRestaurable, setUsuarioRestaurable] = useState(null);
 
-  // Búsqueda y Paginación
   const [busqueda, setBusqueda] = useState('');
   const [pagina, setPagina] = useState(1);
-  const [tamanoPagina] = useState(10);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -79,29 +71,57 @@ export default function Usuarios() {
       setLoading(true);
       setError('');
       setUsuarioRestaurable(null);
-      const data = await obtenerUsuarios({ page: pag, pageSize: tamanoPagina, search: busqueda });
-      if (data && Array.isArray(data.items)) {
-        setUsuarios(data.items);
-        setTotalPaginas(data.totalPages || 1);
-        setTotalItems(data.totalCount || data.items.length);
-      } else if (Array.isArray(data)) {
-        setUsuarios(data);
-        setTotalPaginas(data.totalPages || 1);
-        setTotalItems(data.totalCount || data.length);
-      } else {
-        setUsuarios([]);
-      }
+
+      const data = await obtenerUsuarios({
+        page: pag,
+        pageSize: TAMANO_PAGINA,
+        search: busqueda,
+      });
+
+      setUsuarios(data.items);
+      setTotalPaginas(data.totalPages);
+      setTotalItems(data.totalCount);
     } catch (err) {
       console.error(err);
       setError(mensajeDeError(err, 'No se pudieron obtener los usuarios.'));
     } finally {
       setLoading(false);
     }
-  }, [tamanoPagina, busqueda]);
+  }, [busqueda]);
 
   useEffect(() => {
-    cargarUsuarios(pagina);
-  }, [pagina, cargarUsuarios]);
+    let activo = true;
+
+    async function inicializar() {
+      try {
+        setLoading(true);
+        setError('');
+        setUsuarioRestaurable(null);
+
+        const data = await obtenerUsuarios({
+          page: pagina,
+          pageSize: TAMANO_PAGINA,
+          search: busqueda,
+        });
+
+        if (!activo) return;
+        setUsuarios(data.items);
+        setTotalPaginas(data.totalPages);
+        setTotalItems(data.totalCount);
+      } catch (err) {
+        if (!activo) return;
+        console.error(err);
+        setError(mensajeDeError(err, 'No se pudieron obtener los usuarios.'));
+      } finally {
+        if (activo) setLoading(false);
+      }
+    }
+
+    inicializar();
+    return () => {
+      activo = false;
+    };
+  }, [pagina, busqueda]);
 
   function cambiarCampo(event) {
     const { name, value } = event.target;
@@ -112,7 +132,7 @@ export default function Usuarios() {
   }
 
   function limpiarFormulario() {
-    setForm(usuarioInicial);
+    setForm(USUARIO_INICIAL);
     setEditandoId(null);
     setUsuarioRestaurable(null);
   }
@@ -207,7 +227,7 @@ export default function Usuarios() {
       return;
     }
 
-    if (form.phoneNumber && !/^\d{10}$/.test(form.phoneNumber.trim())) {
+    if (form.phoneNumber?.trim() && !validarTelefono(form.phoneNumber)) {
       setError('El teléfono debe tener exactamente 10 dígitos numéricos (ej. 3811234567).');
       return;
     }
@@ -233,25 +253,10 @@ export default function Usuarios() {
       setUsuarioRestaurable(null);
 
       if (editandoId) {
-        await modificarUsuario(editandoId, {
-          userName: form.userName.trim(),
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          email: form.email?.trim() || null,
-          phoneNumber: form.phoneNumber?.trim() || null,
-          role: form.role,
-        });
+        await modificarUsuario(editandoId, form);
         setMensaje('Usuario modificado correctamente.');
       } else {
-        await altaUsuario({
-          userName: form.userName.trim(),
-          password: form.password,
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          email: form.email?.trim() || null,
-          phoneNumber: form.phoneNumber?.trim() || null,
-          role: form.role,
-        });
+        await altaUsuario(form);
         setMensaje('Usuario creado correctamente.');
       }
       cerrarModal();
@@ -259,7 +264,7 @@ export default function Usuarios() {
     } catch (err) {
       console.error(err);
       const cod = codigoDeError(err);
-      const data = err.response?.data;
+      const data = datosDeError(err);
       if (cod === 'User.SoftDeletedUser') {
         setUsuarioRestaurable({
           id: data?.id,
@@ -290,7 +295,9 @@ export default function Usuarios() {
   }
 
   async function eliminar(id, nombre) {
-    const confirmar = window.confirm(`¿Seguro que querés dar de baja al usuario "${nombre || 'seleccionado'}"?`);
+    const confirmar = window.confirm(
+      `¿Seguro que querés dar de baja al usuario "${nombre || 'seleccionado'}"?`
+    );
     if (!confirmar) return;
 
     try {
@@ -313,7 +320,7 @@ export default function Usuarios() {
             Módulo de gestión de usuarios, roles, permisos y credenciales
           </p>
         </article>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+        <div className="page-head-actions">
           <button type="button" className="btn btn-primary" onClick={abrirNuevo}>
             <UserPlus size={16} />
             Nuevo usuario
@@ -329,20 +336,17 @@ export default function Usuarios() {
         </div>
       </header>
 
-      {/* Alertas */}
-      {mensaje && (
-        <div className="alert-banner alert-success">
-          <Check size={18} />
-          <span>{mensaje}</span>
-          <button type="button" onClick={() => setMensaje('')} className="btn-close-alert"><X size={14} /></button>
-        </div>
-      )}
-      {error && !modalAbierto && !modalPasswordAbierto && (
-        <div className="alert-banner alert-danger">
-          <AlertTriangle size={18} />
-          <span>{error}</span>
-          <button type="button" onClick={() => setError('')} className="btn-close-alert"><X size={14} /></button>
-        </div>
+      <AlertBanner
+        tipo="success"
+        mensaje={mensaje}
+        onClose={() => setMensaje('')}
+      />
+      {!modalAbierto && !modalPasswordAbierto && (
+        <AlertBanner
+          tipo="danger"
+          mensaje={error}
+          onClose={() => setError('')}
+        />
       )}
 
       {/* Modal: Alta / Modificación de usuario */}
@@ -367,25 +371,20 @@ export default function Usuarios() {
             </header>
 
             <form onSubmit={guardar} className="modal-form usuario-form">
-              {error && (
-                <div className="alert-banner alert-danger" role="alert">
-                  <AlertTriangle size={18} />
-                  <div style={{ flex: 1 }}>
-                    <span>{error}</span>
-                    {usuarioRestaurable && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <button
-                          type="button"
-                          className="btn btn-small"
-                          onClick={() => handleRestaurar(usuarioRestaurable.id, usuarioRestaurable.userName)}
-                        >
-                          <RotateCcw size={14} /> Restaurar usuario existente
-                        </button>
-                      </div>
-                    )}
+              <AlertBanner tipo="danger" mensaje={error}>
+                {usuarioRestaurable && (
+                  <div className="alert-restore-actions">
+                    <button
+                      type="button"
+                      className="btn btn-small"
+                      onClick={() => handleRestaurar(usuarioRestaurable.id, usuarioRestaurable.userName)}
+                    >
+                      <RotateCcw size={14} /> Restaurar usuario existente
+                    </button>
                   </div>
-                </div>
-              )}
+                )}
+              </AlertBanner>
+
               <fieldset className="form-section">
                 <legend>Datos personales</legend>
                 <div className="form-row-2">
@@ -485,42 +484,28 @@ export default function Usuarios() {
 
               <fieldset className="form-section">
                 <legend>Rol asignado</legend>
-                {cargandoRoles ? (
-                  <p className="muted text-sm" role="status">Cargando roles...</p>
-                ) : errorRoles ? (
-                  <div className="alert-banner alert-danger" role="alert">
-                    <AlertTriangle size={18} />
-                    <span>{errorRoles}</span>
-                    <button type="button" className="btn btn-small" style={{ marginLeft: 'auto' }} onClick={recargarRoles}>
-                      Reintentar
-                    </button>
-                  </div>
-                ) : roles.length === 0 ? (
-                  <p className="muted text-sm">No hay roles disponibles.</p>
-                ) : (
-                  <div className="role-options">
-                    {roles.map((r) => {
-                      const idRol = r.id || r.nombre;
-                      const info = infoRol(idRol);
-                      return (
-                        <label
-                          key={idRol}
-                          className={`role-option ${form.role === idRol ? 'selected' : ''}`}
-                        >
-                          <input
-                            type="radio"
-                            name="role"
-                            value={idRol}
-                            checked={form.role === idRol}
-                            onChange={cambiarCampo}
-                          />
-                          <span className="role-option-name">{info.etiqueta}</span>
-                          <span className="role-option-desc">{info.detalle}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="role-options">
+                  {roles.map((r) => {
+                    const idRol = r.id || r.nombre;
+                    const info = obtenerInfoRol(idRol);
+                    return (
+                      <label
+                        key={idRol}
+                        className={`role-option${form.role === idRol ? ' selected' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name="role"
+                          value={idRol}
+                          checked={form.role === idRol}
+                          onChange={cambiarCampo}
+                        />
+                        <span className="role-option-name">{info.etiqueta}</span>
+                        <span className="role-option-desc">{info.detalle}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </fieldset>
 
               <div className="modal-actions">
@@ -547,26 +532,26 @@ export default function Usuarios() {
             <header className="modal-header">
               <div>
                 <h2>Restablecer contraseña</h2>
-                <p className="modal-subtitle">Usuario: <strong>{passwordResetData.userName}</strong></p>
+                <p className="modal-subtitle">
+                  Usuario: <strong>{passwordResetData.userName}</strong>
+                </p>
               </div>
-              <button type="button" className="btn-close" onClick={cerrarModalPassword}>
+              <button type="button" className="btn-close" onClick={cerrarModalPassword} aria-label="Cerrar">
                 <X size={18} />
               </button>
             </header>
 
             <form onSubmit={guardarResetPassword} className="modal-form">
-              {error && (
-                <div className="alert-banner alert-danger">
-                  <AlertTriangle size={16} />
-                  <span>{error}</span>
-                </div>
-              )}
+              <AlertBanner tipo="danger" mensaje={error} />
+
               <label>
                 Nueva contraseña *
                 <input
                   type="password"
                   value={passwordResetData.newPassword}
-                  onChange={(e) => setPasswordResetData({ ...passwordResetData, newPassword: e.target.value })}
+                  onChange={(e) =>
+                    setPasswordResetData({ ...passwordResetData, newPassword: e.target.value })
+                  }
                   placeholder="Mínimo 4 caracteres"
                   required
                 />
@@ -576,7 +561,9 @@ export default function Usuarios() {
                 <input
                   type="password"
                   value={passwordResetData.confirmPassword}
-                  onChange={(e) => setPasswordResetData({ ...passwordResetData, confirmPassword: e.target.value })}
+                  onChange={(e) =>
+                    setPasswordResetData({ ...passwordResetData, confirmPassword: e.target.value })
+                  }
                   placeholder="Escribila de nuevo"
                   required
                 />
@@ -596,14 +583,14 @@ export default function Usuarios() {
 
       {/* Tabla de Usuarios */}
       <section className="card">
-        <header className="card-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <header className="card-head">
           <div>
             <h2>
               <Users size={18} />
               Usuarios del sistema ({totalItems})
             </h2>
           </div>
-          <div className="filter-search-box" style={{ maxWidth: '400px' }}>
+          <div className="filter-search-box">
             <Search size={14} className="filter-icon" />
             <input
               type="text"
@@ -643,11 +630,10 @@ export default function Usuarios() {
               </thead>
               <tbody>
                 {usuarios.map((u) => {
-                  const rolNombre = u.role || 'Sin rol';
-                  const rolEtiqueta = infoRol(rolNombre).etiqueta;
+                  const rolEtiqueta = obtenerInfoRol(u.role).etiqueta;
 
                   return (
-                    <tr key={u.id} className="table-row-hover" style={{ height: '65px' }}>
+                    <tr key={u.id} className="table-row-hover">
                       <th scope="row" className="row-title">
                         <code>{u.userName}</code>
                       </th>
@@ -657,12 +643,12 @@ export default function Usuarios() {
                       <td>
                         <div className="contact-cell">
                           {u.email && (
-                            <span className="flex items-center gap-1" style={{ display: 'block', fontSize: '12px' }}>
+                            <span className="contact-item">
                               <Mail size={12} /> {u.email}
                             </span>
                           )}
                           {u.phoneNumber && (
-                            <small className="flex items-center gap-1" style={{ display: 'block', fontSize: '12px' }}>
+                            <small className="contact-item">
                               <Phone size={12} /> {u.phoneNumber}
                             </small>
                           )}
@@ -671,7 +657,7 @@ export default function Usuarios() {
                       </td>
                       <td>
                         <span className="tag tag-success">
-                          <Shield size={12} style={{ marginRight: 4 }} />
+                          <Shield size={12} />
                           {rolEtiqueta}
                         </span>
                       </td>
@@ -707,32 +693,13 @@ export default function Usuarios() {
               </tbody>
             </table>
 
-            {/* Paginación */}
-            {totalPaginas > 1 && (
-              <footer className="pagination-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderTop: '1px solid var(--border-color, #e2e8f0)' }}>
-                <span className="muted text-sm">
-                  Página {pagina} de {totalPaginas} ({totalItems} usuarios en total)
-                </span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    className="btn btn-small"
-                    disabled={pagina <= 1}
-                    onClick={() => setPagina((p) => Math.max(1, p - 1))}
-                  >
-                    <ChevronLeft size={14} /> Anterior
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-small"
-                    disabled={pagina >= totalPaginas}
-                    onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
-                  >
-                    Siguiente <ChevronRight size={14} />
-                  </button>
-                </div>
-              </footer>
-            )}
+            <PaginationBar
+              pagina={pagina}
+              totalPaginas={totalPaginas}
+              totalItems={totalItems}
+              etiquetaItem="usuarios"
+              onPageChange={setPagina}
+            />
           </>
         )}
       </section>

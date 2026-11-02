@@ -6,11 +6,21 @@ import { mensajeDeError } from '../services/errores';
 
 // Prendas del perchero decorativo: silueta, color y posición sobre la barra
 const PRENDAS = [
-  { tipo: 'remera', color: '#E9ECEF', izq: '4%' },
-  { tipo: 'jean', color: '#3E6A9E', izq: '17%' },
-  { tipo: 'buzo', color: '#F2B705', izq: '31%' },
-  { tipo: 'remera', color: '#16202B', izq: '46%' },
-  { tipo: 'jean', color: '#1B3A5C', izq: '60%' },
+  { tipo: 'remera', color: '#E9ECEF', clasePos: 'lg-prenda-1' },
+  { tipo: 'jean', color: '#3E6A9E', clasePos: 'lg-prenda-2' },
+  { tipo: 'buzo', color: '#F2B705', clasePos: 'lg-prenda-3' },
+  { tipo: 'remera', color: '#16202B', clasePos: 'lg-prenda-4' },
+  { tipo: 'jean', color: '#1B3A5C', clasePos: 'lg-prenda-5' },
+];
+
+const TALLES_MUESTRA = ['S', 'M', 'L', 'XL', 'XXL'];
+const COLORES_MUESTRA = [
+  'lg-swatch-chalk',
+  'lg-swatch-ink',
+  'lg-swatch-denim',
+  'lg-swatch-steel',
+  'lg-swatch-tape',
+  'lg-swatch-danger',
 ];
 
 const SILUETAS = {
@@ -23,16 +33,20 @@ function Perchero() {
   return (
     <div className="lg-perchero" aria-hidden="true">
       <div className="lg-barra" />
-      {PRENDAS.map(({ tipo, color, izq }, i) => (
-        <div key={i} className="lg-prenda" style={{ left: izq, '--i': i }}>
+      {PRENDAS.map(({ tipo, color, clasePos }, i) => (
+        <div key={ i } className={`lg-prenda ${clasePos}`}>
           <svg viewBox="0 0 100 24" className="lg-percha">
             <path d="M50 22 L50 12 Q50 6 56 6 Q62 6 62 11" fill="none" stroke="#B4BFCE" strokeWidth="2" strokeLinecap="round" />
             <path d="M50 22 L14 24 M50 22 L86 24" fill="none" stroke="#B4BFCE" strokeWidth="2" strokeLinecap="round" />
           </svg>
           <svg viewBox="0 0 100 96" className={`lg-silueta lg-${tipo}`}>
             <path d={SILUETAS[tipo]} fill={color} />
-            {tipo === 'jean' && <path d="M27 14 H73 M50 14 V38" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeDasharray="3 2" fill="none" />}
-            {tipo === 'buzo' && <path d="M40 10 Q50 26 60 10" stroke="rgba(0,0,0,0.25)" strokeWidth="2" fill="none" />}
+            {tipo === 'jean' && (
+              <path d="M27 14 H73 M50 14 V38" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeDasharray="3 2" fill="none" />
+            )}
+            {tipo === 'buzo' && (
+              <path d="M40 10 Q50 26 60 10" stroke="rgba(0,0,0,0.25)" strokeWidth="2" fill="none" />
+            )}
           </svg>
         </div>
       ))}
@@ -71,7 +85,6 @@ export default function Login() {
 
     try {
       setLoading(true);
-
       const data = await login(form.identificador, form.password);
       guardarSesion(data);
       navigate('/dashboard');
@@ -88,7 +101,6 @@ export default function Login() {
       <Perchero />
 
       <div className="lg-contenido">
-        {/* Texto de presentación */}
         <section className="lg-intro">
           <div className="lg-marca">
             <div className="brand-badge-large">SGCS</div>
@@ -105,13 +117,13 @@ export default function Login() {
 
           <div className="lg-variantes" aria-hidden="true">
             <div className="lg-talles">
-              {['S', 'M', 'L', 'XL', 'XXL'].map((t) => (
+              {TALLES_MUESTRA.map((t) => (
                 <span key={t} className={t === 'L' ? 'activo' : ''}>{t}</span>
               ))}
             </div>
             <div className="lg-colores">
-              {['#E9ECEF', '#16202B', '#1B3A5C', '#3E6A9E', '#F2B705', '#B3382C'].map((c) => (
-                <span key={c} style={{ background: c }} />
+              {COLORES_MUESTRA.map((claseColor) => (
+                <span key={claseColor} className={claseColor} />
               ))}
             </div>
           </div>
@@ -119,7 +131,6 @@ export default function Login() {
           <small className="lg-pie">Proyecto Final - FACET UNT 2026</small>
         </section>
 
-        {/* Formulario: una etiqueta de prenda que cuelga de la barra */}
         <main className="lg-etiqueta-zona">
           <div className="lg-hilo" aria-hidden="true" />
           <div className="lg-etiqueta">

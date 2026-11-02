@@ -7,14 +7,16 @@ import {
   ShieldCheck,
   ArrowRight,
   Plus,
-  Calendar
+  Calendar,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import KpiCard from '../components/KpiCard';
 import { obtenerSesion } from '../services/authService';
 import { obtenerProveedores } from '../services/proveedorService';
 import { obtenerUsuarios } from '../services/usuarioService';
+import { obtenerInfoRol } from '../config/permisos';
 import { formatoMoneda } from '../utils/numeroALetras';
+import { formatearCuit } from '../utils/validaciones';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -38,16 +40,14 @@ export default function Dashboard() {
 
         if (resProvs.status === 'fulfilled') {
           const data = resProvs.value;
-          const items = Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []);
-          setProveedores(items);
-          setTotalProveedores(data.totalCount || items.length);
+          setProveedores(data.items);
+          setTotalProveedores(data.totalCount);
         }
 
         if (resUsers.status === 'fulfilled') {
           const data = resUsers.value;
-          const items = Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []);
-          setUsuarios(items);
-          setTotalUsuarios(data.totalCount || items.length);
+          setUsuarios(data.items);
+          setTotalUsuarios(data.totalCount);
         }
       } catch (err) {
         console.error('Error cargando dashboard:', err);
@@ -72,7 +72,7 @@ export default function Dashboard() {
           </p>
         </article>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div className="page-head-actions">
           <button
             className="btn btn-primary"
             type="button"
@@ -92,7 +92,6 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Indicadores Principales */}
       <section className="kpis" aria-label="Indicadores principales">
         <KpiCard
           label="Proveedores registrados"
@@ -103,7 +102,11 @@ export default function Dashboard() {
         <KpiCard
           label="Saldo inicial proveedores"
           value={formatoMoneda(totalSaldoInicial)}
-          detail={proveedoresConSaldo > 0 ? `${proveedoresConSaldo} proveedores con saldo inicial` : 'Sin saldos iniciales pendientes'}
+          detail={
+            proveedoresConSaldo > 0
+              ? `${proveedoresConSaldo} proveedores con saldo inicial`
+              : 'Sin saldos iniciales pendientes'
+          }
         />
 
         <KpiCard
@@ -119,9 +122,7 @@ export default function Dashboard() {
         />
       </section>
 
-      {/* Grilla con Proveedores y Usuarios recientes */}
       <div className="dashboard-grid">
-        {/* Panel izquierdo: Proveedores recientes */}
         <section className="card">
           <header className="card-head">
             <h2>
@@ -140,7 +141,7 @@ export default function Dashboard() {
             {loading ? (
               <p className="loading-state">Cargando proveedores...</p>
             ) : proveedores.length === 0 ? (
-              <div className="empty-state" style={{ padding: '2rem 1rem' }}>
+              <div className="empty-state empty-state-compact">
                 <Truck size={36} className="empty-icon" />
                 <p className="muted text-sm">No hay proveedores registrados aún.</p>
               </div>
@@ -160,7 +161,7 @@ export default function Dashboard() {
                         <strong>{p.nombre}</strong>
                       </th>
                       <td>
-                        <code>{p.cuit || 'Sin CUIT'}</code>
+                        <code>{formatearCuit(p.cuit)}</code>
                       </td>
                       <td>
                         <span className="term-badge">
@@ -176,7 +177,6 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Panel derecho: Usuarios del sistema */}
         <section className="card">
           <header className="card-head">
             <h2>
@@ -195,7 +195,7 @@ export default function Dashboard() {
             {loading ? (
               <p className="loading-state">Cargando usuarios...</p>
             ) : usuarios.length === 0 ? (
-              <div className="empty-state" style={{ padding: '2rem 1rem' }}>
+              <div className="empty-state empty-state-compact">
                 <Users size={36} className="empty-icon" />
                 <p className="muted text-sm">No hay usuarios disponibles.</p>
               </div>
@@ -219,8 +219,8 @@ export default function Dashboard() {
                       </td>
                       <td>
                         <span className="tag tag-success">
-                          <ShieldCheck size={12} style={{ marginRight: 4 }} />
-                          {u.role || 'Usuario'}
+                          <ShieldCheck size={12} />
+                          {obtenerInfoRol(u.role).etiqueta}
                         </span>
                       </td>
                     </tr>

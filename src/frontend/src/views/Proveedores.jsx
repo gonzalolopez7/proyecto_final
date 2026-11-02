@@ -1,66 +1,67 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Truck,
   Plus,
   Search,
   Edit3,
   Trash2,
-  Check,
   X,
-  AlertTriangle,
-  Building2,
   Calendar,
   Phone,
   Mail,
   MapPin,
   RotateCcw,
-  ChevronLeft,
-  ChevronRight,
-  RefreshCcw
+  RefreshCcw,
 } from 'lucide-react';
 import {
   obtenerProveedores,
   altaProveedor,
   modificarProveedor,
   eliminarProveedor,
-  restaurarProveedor
+  restaurarProveedor,
 } from '../services/proveedorService';
 import { formatoMoneda } from '../utils/numeroALetras';
-import { validarCuit } from '../utils/validaciones';
-import { mensajeDeError, codigoDeError } from '../services/errores';
+import {
+  limpiarCuit,
+  formatearCuit,
+  validarCuit,
+  validarTelefono,
+} from '../utils/validaciones';
+import { mensajeDeError, codigoDeError, datosDeError } from '../services/errores';
+import AlertBanner from '../components/AlertBanner';
+import PaginationBar from '../components/PaginationBar';
+
+const PROVEEDOR_INICIAL = {
+  nombre: '',
+  razonSocial: '',
+  cuit: '',
+  telefono: '',
+  email: '',
+  direccion: '',
+  diasPago: 30,
+  saldoInicial: 0,
+};
+
+const TAMANO_PAGINA = 15;
 
 export default function Proveedores() {
+  const [searchParams] = useSearchParams();
   const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [proveedorRestaurable, setProveedorRestaurable] = useState(null);
 
-  // Paginación
   const [pagina, setPagina] = useState(1);
-  const [tamanoPagina] = useState(15);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [busqueda, setBusqueda] = useState(() => searchParams.get('buscar') || '');
 
-  // Búsqueda en memoria
-  const [busqueda, setBusqueda] = useState('');
-
-  // Modal
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [guardando, setGuardando] = useState(false);
-
-  // Formulario Proveedor (SGCS v2)
-  const [form, setForm] = useState({
-    nombre: '',
-    razonSocial: '',
-    cuit: '',
-    telefono: '',
-    email: '',
-    direccion: '',
-    diasPago: 30,
-    saldoInicial: 0,
-  });
+  const [form, setForm] = useState(PROVEEDOR_INICIAL);
 
   const cargarProveedores = useCallback(async (pag = 1) => {
     try {
@@ -68,45 +69,60 @@ export default function Proveedores() {
       setError('');
       setProveedorRestaurable(null);
 
-      const data = await obtenerProveedores({ page: pag, pageSize: tamanoPagina, search: busqueda });
-      if (data && Array.isArray(data.items)) {
-        setProveedores(data.items);
-        setTotalPaginas(data.totalPages || 1);
-        setTotalItems(data.totalCount || data.items.length);
-      } else if (Array.isArray(data)) {
-        setProveedores(data);
-        setTotalPaginas(data.totalPages || 1);
-        setTotalItems(data.totalCount || data.length);
-      } else {
-        setProveedores([]);
-      }
+      const data = await obtenerProveedores({
+        page: pag,
+        pageSize: TAMANO_PAGINA,
+        search: busqueda,
+      });
+
+      setProveedores(data.items);
+      setTotalPaginas(data.totalPages);
+      setTotalItems(data.totalCount);
     } catch (err) {
       console.error(err);
       setError(mensajeDeError(err, 'No se pudieron cargar los proveedores.'));
     } finally {
       setLoading(false);
     }
-  }, [tamanoPagina, busqueda]);
+  }, [busqueda]);
 
   useEffect(() => {
-    cargarProveedores(pagina);
-  }, [pagina, cargarProveedores]);
+    let activo = true;
 
-  // Proveedores obtenidos y filtrados desde el servidor
-  const proveedoresFiltrados = proveedores;
+    async function inicializar() {
+      try {
+        setLoading(true);
+        setError('');
+        setProveedorRestaurable(null);
+
+        const data = await obtenerProveedores({
+          page: pagina,
+          pageSize: TAMANO_PAGINA,
+          search: busqueda,
+        });
+
+        if (!activo) return;
+        setProveedores(data.items);
+        setTotalPaginas(data.totalPages);
+        setTotalItems(data.totalCount);
+      } catch (err) {
+        if (!activo) return;
+        console.error(err);
+        setError(mensajeDeError(err, 'No se pudieron cargar los proveedores.'));
+      } finally {
+        if (activo) setLoading(false);
+      }
+    }
+
+    inicializar();
+    return () => {
+      activo = false;
+    };
+  }, [pagina, busqueda]);
 
   function abrirNuevo() {
     setEditandoId(null);
-    setForm({
-      nombre: '',
-      razonSocial: '',
-      cuit: '',
-      telefono: '',
-      email: '',
-      direccion: '',
-      diasPago: 30,
-      saldoInicial: 0,
-    });
+    setForm(PROVEEDOR_INICIAL);
     setProveedorRestaurable(null);
     setError('');
     setModalAbierto(true);
@@ -124,7 +140,7 @@ export default function Proveedores() {
     setForm({
       nombre: prov.nombre || prov.razonSocial || '',
       razonSocial: prov.razonSocial || prov.nombre || '',
-      cuit: (prov.cuit || '').replace(/[-.\s]/g, ''),
+      cuit: limpiarCuit(prov.cuit),
       telefono: prov.telefono || '',
       email: prov.email || '',
       direccion: prov.direccion || '',
@@ -147,12 +163,12 @@ export default function Proveedores() {
       return;
     }
 
-    const cuitLimpio = form.cuit.trim().replace(/[-.\s]/g, '');
+    const cuitLimpio = limpiarCuit(form.cuit);
     if (!cuitLimpio) {
       setError('El CUIT es obligatorio.');
       return;
     }
-    if (cuitLimpio.length !== 11 || !/^\d{11}$/.test(cuitLimpio)) {
+    if (cuitLimpio.length !== 11) {
       setError('El CUIT debe tener exactamente 11 dígitos numéricos, sin guiones ni puntos.');
       return;
     }
@@ -161,7 +177,7 @@ export default function Proveedores() {
       return;
     }
 
-    if (form.telefono && !/^\d{10}$/.test(form.telefono.trim())) {
+    if (form.telefono?.trim() && !validarTelefono(form.telefono)) {
       setError('El teléfono debe tener exactamente 10 dígitos numéricos (ej. 3811234567).');
       return;
     }
@@ -189,11 +205,13 @@ export default function Proveedores() {
     } catch (err) {
       console.error(err);
       const cod = codigoDeError(err);
-      const data = err.response?.data;
+      const data = datosDeError(err);
       if (cod === 'Proveedor.SoftDeletedCuit') {
-        const idBaja = data?.id;
-        const nombreBaja = data?.nombre;
-        setProveedorRestaurable({ id: idBaja, nombre: nombreBaja, cuit: form.cuit });
+        setProveedorRestaurable({
+          id: data?.id,
+          nombre: data?.nombre,
+          cuit: form.cuit,
+        });
       }
       setError(mensajeDeError(err, 'Error al guardar el proveedor.'));
     } finally {
@@ -219,7 +237,9 @@ export default function Proveedores() {
   }
 
   async function handleEliminar(id, nombre) {
-    if (!window.confirm(`¿Seguro que desea dar de baja al proveedor "${nombre || 'seleccionado'}"?`)) return;
+    if (!window.confirm(`¿Seguro que desea dar de baja al proveedor "${nombre || 'seleccionado'}"?`)) {
+      return;
+    }
     try {
       setError('');
       await eliminarProveedor(id);
@@ -230,14 +250,7 @@ export default function Proveedores() {
       setError(mensajeDeError(err, 'No se pudo eliminar el proveedor.'));
     }
   }
-  const formatearCuit = (cuit) => {
-    if (!cuit) return 'Sin CUIT';
-    const soloNumeros = cuit.toString().replace(/\D/g, '');
-    if (soloNumeros.length === 11) {
-      return `${soloNumeros.slice(0, 2)}-${soloNumeros.slice(2, 10)}-${soloNumeros.slice(10)}`;
-    }
-    return cuit;
-  };
+
   return (
     <main className="view proveedores-view">
       <header className="page-head">
@@ -247,7 +260,7 @@ export default function Proveedores() {
             Módulo de gestión de proveedores
           </p>
         </article>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+        <div className="page-head-actions">
           <button
             type="button"
             className="btn btn-primary"
@@ -268,32 +281,29 @@ export default function Proveedores() {
         </div>
       </header>
 
-      {/* Alertas */}
-      {mensaje && (
-        <div className="alert-banner alert-success">
-          <Check size={18} />
-          <span>{mensaje}</span>
-          <button type="button" onClick={() => setMensaje('')} className="btn-close-alert"><X size={14} /></button>
-        </div>
-      )}
-      {error && !modalAbierto && (
-        <div className="alert-banner alert-danger">
-          <AlertTriangle size={18} />
-          <span>{error}</span>
-          <button type="button" onClick={() => setError('')} className="btn-close-alert"><X size={14} /></button>
-        </div>
+      <AlertBanner
+        tipo="success"
+        mensaje={mensaje}
+        onClose={() => setMensaje('')}
+      />
+      {!modalAbierto && (
+        <AlertBanner
+          tipo="danger"
+          mensaje={error}
+          onClose={() => setError('')}
+        />
       )}
 
       {/* Tabla de Proveedores */}
       <section className="card">
-        <header className="card-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <header className="card-head">
           <div>
             <h2>
               <Truck size={18} />
               Proveedores Registrados ({totalItems})
             </h2>
           </div>
-          <div className="filter-search-box" style={{ maxWidth: '400px' }}>
+          <div className="filter-search-box">
             <Search size={14} className="filter-icon" />
             <input
               type="text"
@@ -309,7 +319,7 @@ export default function Proveedores() {
 
         {loading ? (
           <p className="loading-state">Cargando proveedores...</p>
-        ) : proveedoresFiltrados.length === 0 ? (
+        ) : proveedores.length === 0 ? (
           <div className="empty-state">
             <Truck size={48} className="empty-icon" />
             <h3>No se encontraron proveedores</h3>
@@ -333,39 +343,39 @@ export default function Proveedores() {
                 </tr>
               </thead>
               <tbody>
-                {proveedoresFiltrados.map((prov) => {
+                {proveedores.map((prov) => {
                   const saldo = prov.saldoInicial || 0;
                   const tieneSaldo = saldo > 0;
 
                   return (
-                    <tr key={prov.id} className="table-row-hover" style={{ height: '85px' }}>
+                    <tr key={prov.id} className="table-row-hover">
                       <th scope="row" className="row-title">
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <strong style={{ fontSize: '14px', color: 'var(--ink, #0f172a)' }}>{prov.nombre}</strong>
+                        <div className="row-stack">
+                          <strong className="row-primary-text">{prov.nombre}</strong>
                           {prov.razonSocial && (
-                            <span className="muted text-sm" style={{ fontWeight: 'normal', color: 'var(--ink-muted, #64748b)' }}>
+                            <span className="row-secondary-text">
                               {prov.razonSocial}
                             </span>
                           )}
                         </div>
                       </th>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <code>{formatearCuit(prov.cuit) || 'Sin CUIT'}</code>
+                      <td className="nowrap">
+                        <code>{formatearCuit(prov.cuit)}</code>
                       </td>
                       <td>
                         <div className="contact-cell">
                           {prov.telefono && (
-                            <span className="flex items-center gap-1" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '12px' }}>
+                            <span className="contact-item">
                               <Phone size={12} /> {prov.telefono}
                             </span>
                           )}
                           {prov.email && (
-                            <span className="flex items-center gap-1" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '12px' }}>
+                            <span className="contact-item">
                               <Mail size={12} /> {prov.email}
                             </span>
                           )}
                           {prov.direccion && (
-                            <span className="flex items-center gap-1" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '12px' }}>
+                            <span className="contact-item">
                               <MapPin size={12} /> {prov.direccion}
                             </span>
                           )}
@@ -380,7 +390,7 @@ export default function Proveedores() {
                           {prov.diasPago ? `${prov.diasPago} días` : 'Contado'}
                         </span>
                       </td>
-                      <td className={`num font-mono ${tieneSaldo ? 'danger-number font-bold' : ''}`}>
+                      <td className={`num font-mono${tieneSaldo ? ' danger-number font-bold' : ''}`}>
                         {formatoMoneda(saldo)}
                       </td>
                       <td className="actions">
@@ -407,32 +417,13 @@ export default function Proveedores() {
               </tbody>
             </table>
 
-            {/* Paginación */}
-            {totalPaginas > 1 && (
-              <footer className="pagination-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderTop: '1px solid var(--border-color, #e2e8f0)' }}>
-                <span className="muted text-sm">
-                  Página {pagina} de {totalPaginas} ({totalItems} proveedores en total)
-                </span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    className="btn btn-small"
-                    disabled={pagina <= 1}
-                    onClick={() => setPagina((p) => Math.max(1, p - 1))}
-                  >
-                    <ChevronLeft size={14} /> Anterior
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-small"
-                    disabled={pagina >= totalPaginas}
-                    onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
-                  >
-                    Siguiente <ChevronRight size={14} />
-                  </button>
-                </div>
-              </footer>
-            )}
+            <PaginationBar
+              pagina={pagina}
+              totalPaginas={totalPaginas}
+              totalItems={totalItems}
+              etiquetaItem="proveedores"
+              onPageChange={setPagina}
+            />
           </>
         )}
       </section>
@@ -443,31 +434,25 @@ export default function Proveedores() {
           <div className="modal-content modal-lg" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
               <h2>{editandoId ? 'Modificar proveedor' : 'Nuevo proveedor'}</h2>
-              <button type="button" className="btn-close" onClick={cerrarModal}>
+              <button type="button" className="btn-close" onClick={cerrarModal} aria-label="Cerrar">
                 <X size={18} />
               </button>
             </header>
 
             <form onSubmit={guardarProveedor} className="modal-form">
-              {error && (
-                <div className="alert-banner alert-danger">
-                  <AlertTriangle size={16} />
-                  <div style={{ flex: 1 }}>
-                    <span>{error}</span>
-                    {proveedorRestaurable && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <button
-                          type="button"
-                          className="btn btn-small"
-                          onClick={() => handleRestaurar(proveedorRestaurable.id, proveedorRestaurable.nombre)}
-                        >
-                          <RotateCcw size={14} /> Restaurar proveedor existente
-                        </button>
-                      </div>
-                    )}
+              <AlertBanner tipo="danger" mensaje={error}>
+                {proveedorRestaurable && (
+                  <div className="alert-restore-actions">
+                    <button
+                      type="button"
+                      className="btn btn-small"
+                      onClick={() => handleRestaurar(proveedorRestaurable.id, proveedorRestaurable.nombre)}
+                    >
+                      <RotateCcw size={14} /> Restaurar proveedor existente
+                    </button>
                   </div>
-                </div>
-              )}
+                )}
+              </AlertBanner>
 
               <div className="form-row-2">
                 <label>
@@ -500,10 +485,7 @@ export default function Proveedores() {
                     type="text"
                     maxLength={11}
                     value={form.cuit}
-                    onChange={(e) => {
-                      const soloNumeros = e.target.value.replace(/\D/g, '');
-                      setForm({ ...form, cuit: soloNumeros });
-                    }}
+                    onChange={(e) => setForm({ ...form, cuit: limpiarCuit(e.target.value) })}
                     placeholder="Ej. 30712345678"
                     required
                   />
