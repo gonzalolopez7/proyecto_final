@@ -1,4 +1,3 @@
-
 using SGCS.Application.Common.Models;
 
 namespace SGCS.Application.Features.Depositos;
@@ -13,7 +12,7 @@ public static class DepositoErrors
     public static Error NameAlreadyExists(string nombre) =>
         Error.Conflict(
             "Deposito.NameAlreadyExists",
-            $"Ya existe un depósito con el nombre '{nombre}'.");
+            $"Ya existe un depósito activo con el nombre '{nombre}'.");
 
     public static Error SoftDeletedNombre(string nombre, string existingId) =>
         Error.Conflict(
@@ -21,6 +20,7 @@ public static class DepositoErrors
             $"El depósito '{nombre}' ya existe pero fue dado de baja.",
             new()
             {
+                ["id"] = existingId,
                 ["existingDepositoId"] = existingId,
                 ["nombre"] = nombre
             });
@@ -39,9 +39,4 @@ public static class DepositoErrors
         Error.Conflict(
             "Deposito.HasStock",
             $"No se puede eliminar el depósito '{id}' porque todavía contiene stock.");
-
-    public static Error AlreadyInState(string id, bool activo) =>
-        Error.Conflict(
-            "Deposito.AlreadyInState",
-            $"El depósito '{id}' ya se encuentra {(activo ? "activo" : "inactivo")}.");
 }

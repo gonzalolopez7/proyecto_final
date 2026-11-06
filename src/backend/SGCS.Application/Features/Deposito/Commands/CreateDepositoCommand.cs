@@ -1,4 +1,3 @@
-
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -21,8 +20,8 @@ public class CreateDepositoCommandValidator
         RuleFor(x => x.Nombre)
             .NotEmpty()
             .WithMessage("El nombre del depósito es obligatorio.")
-            .MaximumLength(150)
-            .WithMessage("El nombre no debe superar los 150 caracteres.");
+            .MaximumLength(100)
+            .WithMessage("El nombre del depósito no debe superar los 100 caracteres.");
 
         RuleFor(x => x.Descripcion)
             .MaximumLength(500)
@@ -67,12 +66,10 @@ public class CreateDepositoCommandHandler
         var deposito = new Deposito
         {
             Nombre = nombre,
-            Descripcion = request.Descripcion?.Trim(),
-            Activo = true
+            Descripcion = request.Descripcion?.Trim()
         };
 
         _context.Depositos.Add(deposito);
-
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result<string>.Success(deposito.Id);

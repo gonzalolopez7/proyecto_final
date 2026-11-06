@@ -4,7 +4,6 @@ public record DepositoDto(
     string Id,
     string Nombre,
     string? Descripcion,
-    bool Activo,
     int CantidadEstanterias,
     int CantidadUnidades
 );

@@ -1,4 +1,3 @@
-
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +15,9 @@ public class RestoreDepositoCommandValidator
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .MaximumLength(36);
+            .WithMessage("El ID del depósito es obligatorio.")
+            .MaximumLength(36)
+            .WithMessage("El ID del depósito no debe superar los 36 caracteres.");
     }
 }
 
@@ -54,6 +55,7 @@ public class RestoreDepositoCommandHandler
         deposito.DeletedAt = null;
         deposito.DeletedBy = null;
 
+        _context.Depositos.Update(deposito);
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

@@ -15,7 +15,9 @@ public class DeleteDepositoCommandValidator
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .MaximumLength(36);
+            .WithMessage("El ID del depósito es obligatorio.")
+            .MaximumLength(36)
+            .WithMessage("El ID del depósito no debe superar los 36 caracteres.");
     }
 }
 
@@ -40,6 +42,7 @@ public class DeleteDepositoCommandHandler
         var hasStock = await _context.Ubicaciones
             .IgnoreQueryFilters()
             .AnyAsync(u =>
+                u.Estanteria != null &&
                 u.Estanteria.IdDeposito == request.Id &&
                 u.Cantidad > 0,
                 cancellationToken);
@@ -54,10 +57,7 @@ public class DeleteDepositoCommandHandler
             return Result.Failure(
                 DepositoErrors.HasActiveShelves(request.Id));
 
-        deposito.IsDeleted = true;
-        deposito.DeletedAt = DateTime.UtcNow;
-        deposito.DeletedBy = null;
-
+        _context.Depositos.Remove(deposito);
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

@@ -35,9 +35,10 @@ public class DepositoController : ControllerBase
             )
             : this.ToProblemDetails(result);
     }
+
     [HttpPost("{id}/restore")]
     public async Task<IActionResult> Restore(
-    [FromRoute] string id)
+        [FromRoute] string id)
     {
         var result = await _mediator.Send(
             new RestoreDepositoCommand(id));
@@ -46,6 +47,7 @@ public class DepositoController : ControllerBase
             ? NoContent()
             : this.ToProblemDetails(result);
     }
+
     [HttpGet]
     public async Task<IActionResult> Get(
         [FromQuery] GetDepositosQuery query)
@@ -80,23 +82,6 @@ public class DepositoController : ControllerBase
                 id,
                 request.Nombre,
                 request.Descripcion
-            )
-        );
-
-        return result.Succeeded
-            ? NoContent()
-            : this.ToProblemDetails(result);
-    }
-
-    [HttpPatch("{id}/estado")]
-    public async Task<IActionResult> ChangeStatus(
-        [FromRoute] string id,
-        [FromBody] ChangeDepositoStatusRequest request)
-    {
-        var result = await _mediator.Send(
-            new CambiarEstadoDepositoCommand(
-                id,
-                request.Activo
             )
         );
 

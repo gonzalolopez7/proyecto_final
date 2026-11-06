@@ -3,7 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SGCS.Application.Common.Interfaces;
 using SGCS.Application.Common.Models;
-using SGCS.Application.Common.Models.Dtos; 
+using SGCS.Application.Common.Models.Dtos;
 
 namespace SGCS.Application.Features.Depositos.Queries;
 
@@ -17,7 +17,9 @@ public class GetDepositoByIdQueryValidator
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .MaximumLength(36);
+            .WithMessage("El ID del depósito es obligatorio.")
+            .MaximumLength(36)
+            .WithMessage("El ID del depósito no debe superar los 36 caracteres.");
     }
 }
 
@@ -40,10 +42,9 @@ public class GetDepositoByIdQueryHandler
                 d.Id,
                 d.Nombre,
                 d.Descripcion,
-                d.Activo,
-                d.Estanterias.Count,
-                d.Estanterias
-                    .SelectMany(e => e.Ubicaciones)
+                _context.Estanterias.Count(e => e.IdDeposito == d.Id),
+                _context.Ubicaciones
+                    .Where(u => u.Estanteria != null && u.Estanteria.IdDeposito == d.Id)
                     .Sum(u => (int?)u.Cantidad) ?? 0
             ))
             .FirstOrDefaultAsync(cancellationToken);

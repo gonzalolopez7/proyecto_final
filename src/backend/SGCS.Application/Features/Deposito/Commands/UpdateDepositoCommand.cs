@@ -1,4 +1,3 @@
-
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -25,14 +24,19 @@ public class UpdateDepositoCommandValidator
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .MaximumLength(36);
+            .WithMessage("El ID del depósito es obligatorio.")
+            .MaximumLength(36)
+            .WithMessage("El ID del depósito no debe superar los 36 caracteres.");
 
         RuleFor(x => x.Nombre)
             .NotEmpty()
-            .MaximumLength(150);
+            .WithMessage("El nombre del depósito es obligatorio.")
+            .MaximumLength(100)
+            .WithMessage("El nombre del depósito no debe superar los 100 caracteres.");
 
         RuleFor(x => x.Descripcion)
-            .MaximumLength(500);
+            .MaximumLength(500)
+            .WithMessage("La descripción no debe superar los 500 caracteres.");
     }
 }
 
@@ -61,31 +65,34 @@ public class UpdateDepositoCommandHandler
 
         var nombre = request.Nombre.Trim();
 
-        // Buscar también depósitos eliminados lógicamente.
-        var existing = await _context.Depositos
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                d => d.Nombre == nombre &&
-                     d.Id != request.Id,
-                cancellationToken);
-
-        if (existing is not null)
+        if (deposito.Nombre != nombre)
         {
-            if (existing.IsDeleted)
-            {
-                return Result.Failure(
-                    DepositoErrors.SoftDeletedNombre(
-                        existing.Nombre,
-                        existing.Id));
-            }
+            var existing = await _context.Depositos
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(
+                    d => d.Nombre == nombre &&
+                         d.Id != request.Id,
+                    cancellationToken);
 
-            return Result.Failure(
-                DepositoErrors.NameAlreadyExists(nombre));
+            if (existing is not null)
+            {
+                if (existing.IsDeleted)
+                {
+                    return Result.Failure(
+                        DepositoErrors.SoftDeletedNombre(
+                            existing.Nombre,
+                            existing.Id));
+                }
+
+                return Result.Failure(
+                    DepositoErrors.NameAlreadyExists(nombre));
+            }
         }
 
         deposito.Nombre = nombre;
         deposito.Descripcion = request.Descripcion?.Trim();
 
+        _context.Depositos.Update(deposito);
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

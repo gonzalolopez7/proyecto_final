@@ -3,13 +3,11 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SGCS.Application.Common.Interfaces;
 using SGCS.Application.Common.Models;
-using SGCS.Application.Common.Models.Dtos; 
+using SGCS.Application.Common.Models.Dtos;
 
 namespace SGCS.Application.Features.Depositos.Queries;
 
-public record GetDepositosQuery(
-    bool? Activo = null
-) : IRequest<Result<IReadOnlyList<DepositoDto>>>;
+public record GetDepositosQuery : IRequest<Result<IReadOnlyList<DepositoDto>>>;
 
 public class GetDepositosQueryValidator : AbstractValidator<GetDepositosQuery>
 {
@@ -27,21 +25,16 @@ public class GetDepositosQueryHandler
         GetDepositosQuery request,
         CancellationToken cancellationToken)
     {
-        var query = _context.Depositos.AsNoTracking();
-
-        if (request.Activo.HasValue)
-            query = query.Where(d => d.Activo == request.Activo.Value);
-
-        var depositos = await query
+        var depositos = await _context.Depositos
+            .AsNoTracking()
             .OrderBy(d => d.Nombre)
             .Select(d => new DepositoDto(
                 d.Id,
                 d.Nombre,
                 d.Descripcion,
-                d.Activo,
-                d.Estanterias.Count,
-                d.Estanterias
-                    .SelectMany(e => e.Ubicaciones)
+                _context.Estanterias.Count(e => e.IdDeposito == d.Id),
+                _context.Ubicaciones
+                    .Where(u => u.Estanteria != null && u.Estanteria.IdDeposito == d.Id)
                     .Sum(u => (int?)u.Cantidad) ?? 0
             ))
             .ToListAsync(cancellationToken);
