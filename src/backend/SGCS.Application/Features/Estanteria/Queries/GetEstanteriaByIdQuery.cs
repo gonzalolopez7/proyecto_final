@@ -17,7 +17,9 @@ public class GetEstanteriaByIdQueryValidator
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .MaximumLength(36);
+            .WithMessage("El ID de la estantería es obligatorio.")
+            .MaximumLength(36)
+            .WithMessage("El ID de la estantería no debe superar los 36 caracteres.");
     }
 }
 
@@ -39,11 +41,13 @@ public class GetEstanteriaByIdQueryHandler
             .Select(e => new EstanteriaDto(
                 e.Id,
                 e.IdDeposito,
-                e.Deposito.Nombre,
+                e.Deposito != null ? e.Deposito.Nombre : string.Empty,
                 e.Nombre,
                 e.Descripcion,
-                e.Ubicaciones.Count,
-                e.Ubicaciones.Sum(u => (int?)u.Cantidad) ?? 0
+                _context.Ubicaciones.Count(u => u.IdEstanteria == e.Id && u.Cantidad > 0),
+                _context.Ubicaciones
+                    .Where(u => u.IdEstanteria == e.Id)
+                    .Sum(u => (int?)u.Cantidad) ?? 0
             ))
             .FirstOrDefaultAsync(cancellationToken);
 

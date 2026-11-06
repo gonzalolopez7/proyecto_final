@@ -1,4 +1,3 @@
-
 using SGCS.Application.Common.Models;
 
 namespace SGCS.Application.Features.Estanterias;
@@ -13,14 +12,15 @@ public static class EstanteriaErrors
     public static Error NameAlreadyExists(string nombre) =>
         Error.Conflict(
             "Estanteria.NameAlreadyExists",
-            $"Ya existe una estantería con el nombre '{nombre}' en ese depósito.");
+            $"Ya existe una estantería activa con el nombre '{nombre}' en ese depósito.");
 
     public static Error SoftDeletedNombre(string nombre, string existingId) =>
         Error.Conflict(
             "Estanteria.SoftDeletedNombre",
-            $"La estantería '{nombre}' ya existe pero fue dada de baja.",
+            $"La estantería '{nombre}' ya existe en ese depósito pero fue dada de baja.",
             new()
             {
+                ["id"] = existingId,
                 ["existingEstanteriaId"] = existingId,
                 ["nombre"] = nombre
             });
@@ -35,18 +35,8 @@ public static class EstanteriaErrors
             "Estanteria.DepositoNotFound",
             $"No se encontró el depósito con ID '{id}'.");
 
-    public static Error DepositoInactive(string nombre) =>
-        Error.Conflict(
-            "Estanteria.DepositoInactive",
-            $"No se puede operar sobre la estantería porque el depósito '{nombre}' está inactivo.");
-
     public static Error HasStock(string id) =>
         Error.Conflict(
             "Estanteria.HasStock",
             $"No se puede eliminar la estantería '{id}' porque contiene stock.");
-
-    public static Error AlreadyDeleted(string id) =>
-        Error.Conflict(
-            "Estanteria.AlreadyDeleted",
-            $"La estantería '{id}' ya está eliminada.");
 }

@@ -8,8 +8,7 @@ using SGCS.Application.Common.Models.Dtos;
 namespace SGCS.Application.Features.Estanterias.Queries;
 
 public record GetEstanteriasQuery(
-    string? IdDeposito = null,
-    bool IncluirDepositosInactivos = false
+    string? IdDeposito = null
 ) : IRequest<Result<IReadOnlyList<EstanteriaDto>>>;
 
 public class GetEstanteriasQueryValidator
@@ -19,6 +18,7 @@ public class GetEstanteriasQueryValidator
     {
         RuleFor(x => x.IdDeposito)
             .MaximumLength(36)
+            .WithMessage("El ID del depósito no debe superar los 36 caracteres.")
             .When(x => !string.IsNullOrEmpty(x.IdDeposito));
     }
 }
@@ -40,19 +40,18 @@ public class GetEstanteriasQueryHandler
         if (!string.IsNullOrEmpty(request.IdDeposito))
             query = query.Where(e => e.IdDeposito == request.IdDeposito);
 
-        if (!request.IncluirDepositosInactivos)
-            query = query.Where(e => e.Deposito.Activo);
-
         var estanterias = await query
             .OrderBy(e => e.Nombre)
             .Select(e => new EstanteriaDto(
                 e.Id,
                 e.IdDeposito,
-                e.Deposito.Nombre,
+                e.Deposito != null ? e.Deposito.Nombre : string.Empty,
                 e.Nombre,
                 e.Descripcion,
-                e.Ubicaciones.Count,
-                e.Ubicaciones.Sum(u => (int?)u.Cantidad) ?? 0
+                _context.Ubicaciones.Count(u => u.IdEstanteria == e.Id && u.Cantidad > 0),
+                _context.Ubicaciones
+                    .Where(u => u.IdEstanteria == e.Id)
+                    .Sum(u => (int?)u.Cantidad) ?? 0
             ))
             .ToListAsync(cancellationToken);
 

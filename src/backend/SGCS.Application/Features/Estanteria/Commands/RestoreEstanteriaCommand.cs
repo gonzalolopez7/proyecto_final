@@ -1,4 +1,3 @@
-
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +15,9 @@ public class RestoreEstanteriaCommandValidator
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .MaximumLength(36);
+            .WithMessage("El ID de la estantería es obligatorio.")
+            .MaximumLength(36)
+            .WithMessage("El ID de la estantería no debe superar los 36 caracteres.");
     }
 }
 
@@ -66,6 +67,7 @@ public class RestoreEstanteriaCommandHandler
         estanteria.DeletedAt = null;
         estanteria.DeletedBy = null;
 
+        _context.Estanterias.Update(estanteria);
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

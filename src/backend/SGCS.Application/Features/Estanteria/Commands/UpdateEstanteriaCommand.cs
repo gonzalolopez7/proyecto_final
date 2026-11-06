@@ -1,4 +1,3 @@
-
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -25,14 +24,19 @@ public class UpdateEstanteriaCommandValidator
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .MaximumLength(36);
+            .WithMessage("El ID de la estantería es obligatorio.")
+            .MaximumLength(36)
+            .WithMessage("El ID de la estantería no debe superar los 36 caracteres.");
 
         RuleFor(x => x.Nombre)
             .NotEmpty()
-            .MaximumLength(100);
+            .WithMessage("El nombre de la estantería es obligatorio.")
+            .MaximumLength(100)
+            .WithMessage("El nombre de la estantería no debe superar los 100 caracteres.");
 
         RuleFor(x => x.Descripcion)
-            .MaximumLength(500);
+            .MaximumLength(500)
+            .WithMessage("La descripción no debe superar los 500 caracteres.");
     }
 }
 
@@ -61,32 +65,35 @@ public class UpdateEstanteriaCommandHandler
 
         var nombre = request.Nombre.Trim();
 
-        // Buscar también estanterías eliminadas lógicamente.
-        var existing = await _context.Estanterias
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                e => e.IdDeposito == estanteria.IdDeposito &&
-                     e.Nombre == nombre &&
-                     e.Id != request.Id,
-                cancellationToken);
-
-        if (existing is not null)
+        if (estanteria.Nombre != nombre)
         {
-            if (existing.IsDeleted)
-            {
-                return Result.Failure(
-                    EstanteriaErrors.SoftDeletedNombre(
-                        existing.Nombre,
-                        existing.Id));
-            }
+            var existing = await _context.Estanterias
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(
+                    e => e.IdDeposito == estanteria.IdDeposito &&
+                         e.Nombre == nombre &&
+                         e.Id != request.Id,
+                    cancellationToken);
 
-            return Result.Failure(
-                EstanteriaErrors.NameAlreadyExists(nombre));
+            if (existing is not null)
+            {
+                if (existing.IsDeleted)
+                {
+                    return Result.Failure(
+                        EstanteriaErrors.SoftDeletedNombre(
+                            existing.Nombre,
+                            existing.Id));
+                }
+
+                return Result.Failure(
+                    EstanteriaErrors.NameAlreadyExists(nombre));
+            }
         }
 
         estanteria.Nombre = nombre;
         estanteria.Descripcion = request.Descripcion?.Trim();
 
+        _context.Estanterias.Update(estanteria);
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

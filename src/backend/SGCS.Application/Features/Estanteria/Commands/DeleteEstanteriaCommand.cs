@@ -15,7 +15,9 @@ public class DeleteEstanteriaCommandValidator
     {
         RuleFor(x => x.Id)
             .NotEmpty()
-            .MaximumLength(36);
+            .WithMessage("El ID de la estantería es obligatorio.")
+            .MaximumLength(36)
+            .WithMessage("El ID de la estantería no debe superar los 36 caracteres.");
     }
 }
 
@@ -49,10 +51,7 @@ public class DeleteEstanteriaCommandHandler
             return Result.Failure(
                 EstanteriaErrors.HasStock(request.Id));
 
-        estanteria.IsDeleted = true;
-        estanteria.DeletedAt = DateTime.UtcNow;
-        estanteria.DeletedBy = null;
-
+        _context.Estanterias.Remove(estanteria);
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

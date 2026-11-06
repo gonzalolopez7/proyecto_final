@@ -1,4 +1,3 @@
-
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -21,14 +20,19 @@ public class CreateEstanteriaCommandValidator
     {
         RuleFor(x => x.IdDeposito)
             .NotEmpty()
-            .MaximumLength(36);
+            .WithMessage("El ID del depósito es obligatorio.")
+            .MaximumLength(36)
+            .WithMessage("El ID del depósito no debe superar los 36 caracteres.");
 
         RuleFor(x => x.Nombre)
             .NotEmpty()
-            .MaximumLength(100);
+            .WithMessage("El nombre de la estantería es obligatorio.")
+            .MaximumLength(100)
+            .WithMessage("El nombre de la estantería no debe superar los 100 caracteres.");
 
         RuleFor(x => x.Descripcion)
-            .MaximumLength(500);
+            .MaximumLength(500)
+            .WithMessage("La descripción no debe superar los 500 caracteres.");
     }
 }
 
@@ -53,12 +57,6 @@ public class CreateEstanteriaCommandHandler
         {
             return Result<string>.Failure(
                 EstanteriaErrors.DepositoNotFound(request.IdDeposito));
-        }
-
-        if (!deposito.Activo)
-        {
-            return Result<string>.Failure(
-                EstanteriaErrors.DepositoInactive(deposito.Nombre));
         }
 
         var nombre = request.Nombre.Trim();
@@ -92,7 +90,6 @@ public class CreateEstanteriaCommandHandler
         };
 
         _context.Estanterias.Add(estanteria);
-
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result<string>.Success(estanteria.Id);
