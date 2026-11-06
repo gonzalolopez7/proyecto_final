@@ -21,8 +21,36 @@ public class UbicacionController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpGet("variante/{idVariante}")]
-    public async Task<IActionResult> GetByVariante(
+    [HttpPost]
+    public async Task<IActionResult> Create(
+        [FromBody] CreateUbicacionCommand command)
+    {
+        var result = await _mediator.Send(command);
+
+        return result.Succeeded
+            ? CreatedAtAction(
+                nameof(GetById),
+                new { id = result.Value },
+                result.Value
+            )
+            : this.ToProblemDetails(result);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(
+        [FromRoute] string id)
+    {
+        var result = await _mediator.Send(
+            new GetUbicacionByIdQuery(id)
+        );
+
+        return result.Succeeded
+            ? Ok(result.Value)
+            : this.ToProblemDetails(result);
+    }
+
+    [HttpGet("by-variante/{idVariante}")]
+    public async Task<IActionResult> GetByVarianteId(
         [FromRoute] string idVariante)
     {
         var result = await _mediator.Send(
@@ -34,8 +62,8 @@ public class UbicacionController : ControllerBase
             : this.ToProblemDetails(result);
     }
 
-    [HttpGet("estanteria/{idEstanteria}")]
-    public async Task<IActionResult> GetByEstanteria(
+    [HttpGet("by-estanteria/{idEstanteria}")]
+    public async Task<IActionResult> GetByEstanteriaId(
         [FromRoute] string idEstanteria)
     {
         var result = await _mediator.Send(
@@ -47,14 +75,33 @@ public class UbicacionController : ControllerBase
             : this.ToProblemDetails(result);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Assign(
-        [FromBody] AsignarUbicacionCommand command)
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(
+        [FromRoute] string id,
+        [FromBody] UpdateUbicacionRequest request)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(
+            new UpdateUbicacionCommand(
+                id,
+                request.Cantidad
+            )
+        );
 
         return result.Succeeded
-            ? Ok(result.Value)
+            ? NoContent()
+            : this.ToProblemDetails(result);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(
+        [FromRoute] string id)
+    {
+        var result = await _mediator.Send(
+            new DeleteUbicacionCommand(id)
+        );
+
+        return result.Succeeded
+            ? NoContent()
             : this.ToProblemDetails(result);
     }
 }

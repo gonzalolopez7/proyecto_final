@@ -17,7 +17,9 @@ public class GetUbicacionesPorVarianteQueryValidator
     {
         RuleFor(x => x.IdVariante)
             .NotEmpty()
-            .MaximumLength(36);
+            .WithMessage("El ID de la variante es obligatorio.")
+            .MaximumLength(36)
+            .WithMessage("El ID de la variante no debe superar los 36 caracteres.");
     }
 }
 
@@ -46,15 +48,20 @@ public class GetUbicacionesPorVarianteQueryHandler
         var ubicaciones = await _context.Ubicaciones
             .AsNoTracking()
             .Where(u => u.IdVariante == request.IdVariante)
-            .OrderBy(u => u.Estanteria.Nombre)
+            .OrderBy(u => u.Estanteria != null && u.Estanteria.Deposito != null ? u.Estanteria.Deposito.Nombre : string.Empty)
+            .ThenBy(u => u.Estanteria != null ? u.Estanteria.Nombre : string.Empty)
             .Select(u => new UbicacionDto(
                 u.Id,
                 u.IdVariante,
-                u.Variante.Sku,
+                u.Variante != null ? u.Variante.Sku : string.Empty,
+                u.Variante != null && u.Variante.Producto != null ? u.Variante.Producto.Nombre : null,
+                u.Variante != null && u.Variante.Talle != null ? u.Variante.Talle.Nombre : null,
+                u.Variante != null && u.Variante.Color != null ? u.Variante.Color.Nombre : null,
+                u.Variante != null && u.Variante.Color != null ? u.Variante.Color.CodigoHex : null,
                 u.IdEstanteria,
-                u.Estanteria.Nombre,
-                u.Estanteria.IdDeposito,
-                u.Estanteria.Deposito.Nombre,
+                u.Estanteria != null ? u.Estanteria.Nombre : string.Empty,
+                u.Estanteria != null ? u.Estanteria.IdDeposito : string.Empty,
+                u.Estanteria != null && u.Estanteria.Deposito != null ? u.Estanteria.Deposito.Nombre : string.Empty,
                 u.Cantidad
             ))
             .ToListAsync(cancellationToken);
