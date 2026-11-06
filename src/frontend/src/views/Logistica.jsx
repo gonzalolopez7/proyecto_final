@@ -1,13 +1,14 @@
 import { Fragment, useEffect, useState, useCallback } from 'react';
-import { Warehouse, Plus, Edit3, Trash2, X, RotateCcw, Power, FolderTree, RefreshCcw } from 'lucide-react';
+import { Warehouse, Plus, Edit3, Trash2, X, RotateCcw, FolderTree, RefreshCcw } from 'lucide-react';
 import {
-  obtenerDepositos, altaDeposito, modificarDeposito, cambiarEstadoDeposito,
+  obtenerDepositos, altaDeposito, modificarDeposito,
   eliminarDeposito, restaurarDeposito,
-  obtenerEstanterias, altaEstanteria, eliminarEstanteria,
+  obtenerEstanterias, altaEstanteria, modificarEstanteria,
+  eliminarEstanteria, restaurarEstanteria,
+  obtenerUbicacionesPorEstanteria,
 } from '../services/logisticaService';
 import { mensajeDeError, codigoDeError, datosDeError } from '../services/errores';
 import AlertBanner from '../components/AlertBanner';
-import { obtenerUbicacionesPorEstanteria } from '../services/logisticaService';
 
 const DEPOSITO_INICIAL = { nombre: '', descripcion: '' };
 const ESTANTERIA_INICIAL = { idDeposito: '', nombre: '', descripcion: '' };
@@ -28,7 +29,9 @@ export default function Logistica() {
 
   const [depositoSeleccionado, setDepositoSeleccionado] = useState('');
   const [estanterias, setEstanterias] = useState([]);
+  const [estanteriaRestaurable, setEstanteriaRestaurable] = useState(null);
   const [modalEstanteriaAbierto, setModalEstanteriaAbierto] = useState(false);
+  const [editandoEstanteriaId, setEditandoEstanteriaId] = useState(null);
   const [formEstanteria, setFormEstanteria] = useState(ESTANTERIA_INICIAL);
   const [guardandoEstanteria, setGuardandoEstanteria] = useState(false);
 
@@ -50,6 +53,8 @@ export default function Logistica() {
   useEffect(() => { cargarDepositos(); }, [cargarDepositos]);
 
   useEffect(() => {
+    setEstanteriaExpandida(null);
+    setContenidoEstanteria([]);
     if (!depositoSeleccionado) { setEstanterias([]); return; }
     obtenerEstanterias(depositoSeleccionado).then(setEstanterias).catch((err) => {
       setError(mensajeDeError(err, 'No se pudieron cargar las estanterías.'));
@@ -83,11 +88,16 @@ export default function Logistica() {
       setError('');
       setDepositoRestaurable(null);
 
+      const payload = {
+        nombre: formDeposito.nombre.trim(),
+        descripcion: formDeposito.descripcion.trim() || null,
+      };
+
       if (editandoDepositoId) {
-        await modificarDeposito(editandoDepositoId, formDeposito);
+        await modificarDeposito(editandoDepositoId, payload);
         setMensaje('Depósito modificado con éxito.');
       } else {
-        await altaDeposito(formDeposito);
+        await altaDeposito(payload);
         setMensaje('Depósito creado con éxito.');
       }
       setModalDepositoAbierto(false);
@@ -96,7 +106,7 @@ export default function Logistica() {
       const cod = codigoDeError(err);
       const data = datosDeError(err);
       if (cod === 'Deposito.SoftDeletedNombre') {
-        setDepositoRestaurable({ id: data?.existingDepositoId, nombre: data?.nombre });
+        setDepositoRestaurable({ id: data?.existingDepositoId || data?.id, nombre: data?.nombre });
       }
       setError(mensajeDeError(err, 'Error al guardar el depósito.'));
     } finally {
@@ -116,21 +126,15 @@ export default function Logistica() {
     }
   }
 
-  async function handleToggleActivo(d) {
-    try {
-      await cambiarEstadoDeposito(d.id, !d.activo);
-      setMensaje(`Depósito "${d.nombre}" ${d.activo ? 'desactivado' : 'activado'}.`);
-      await cargarDepositos();
-    } catch (err) {
-      setError(mensajeDeError(err, 'No se pudo cambiar el estado del depósito.'));
-    }
-  }
-
   async function handleEliminarDeposito(id, nombre) {
     if (!window.confirm(`¿Dar de baja el depósito "${nombre}"?`)) return;
     try {
       await eliminarDeposito(id);
       setMensaje('Depósito dado de baja correctamente.');
+      if (depositoSeleccionado === id) {
+        setDepositoSeleccionado('');
+        setEstanterias([]);
+      }
       await cargarDepositos();
     } catch (err) {
       setError(mensajeDeError(err, 'No se pudo eliminar el depósito. Verificá que no tenga estanterías activas.'));
@@ -138,7 +142,21 @@ export default function Logistica() {
   }
 
   function abrirNuevaEstanteria() {
+    setEditandoEstanteriaId(null);
     setFormEstanteria({ ...ESTANTERIA_INICIAL, idDeposito: depositoSeleccionado });
+    setEstanteriaRestaurable(null);
+    setError('');
+    setModalEstanteriaAbierto(true);
+  }
+
+  function abrirEditarEstanteria(est) {
+    setEditandoEstanteriaId(est.id);
+    setFormEstanteria({
+      idDeposito: est.idDeposito,
+      nombre: est.nombre,
+      descripcion: est.descripcion || '',
+    });
+    setEstanteriaRestaurable(null);
     setError('');
     setModalEstanteriaAbierto(true);
   }
@@ -151,14 +169,47 @@ export default function Logistica() {
     try {
       setGuardandoEstanteria(true);
       setError('');
-      await altaEstanteria(formEstanteria);
-      setMensaje('Estantería creada con éxito.');
+      setEstanteriaRestaurable(null);
+
+      if (editandoEstanteriaId) {
+        await modificarEstanteria(editandoEstanteriaId, {
+          nombre: formEstanteria.nombre.trim(),
+          descripcion: formEstanteria.descripcion.trim() || null,
+        });
+        setMensaje('Estantería modificada con éxito.');
+      } else {
+        await altaEstanteria({
+          idDeposito: formEstanteria.idDeposito,
+          nombre: formEstanteria.nombre.trim(),
+          descripcion: formEstanteria.descripcion.trim() || null,
+        });
+        setMensaje('Estantería creada con éxito.');
+      }
       setModalEstanteriaAbierto(false);
       setEstanterias(await obtenerEstanterias(depositoSeleccionado));
+      await cargarDepositos();
     } catch (err) {
+      const cod = codigoDeError(err);
+      const data = datosDeError(err);
+      if (cod === 'Estanteria.SoftDeletedNombre') {
+        setEstanteriaRestaurable({ id: data?.existingEstanteriaId || data?.id, nombre: data?.nombre });
+      }
       setError(mensajeDeError(err, 'Error al guardar la estantería.'));
     } finally {
       setGuardandoEstanteria(false);
+    }
+  }
+
+  async function handleRestaurarEstanteria(id, nombre) {
+    try {
+      await restaurarEstanteria(id);
+      setMensaje(`Estantería "${nombre}" restaurada exitosamente.`);
+      setEstanteriaRestaurable(null);
+      setModalEstanteriaAbierto(false);
+      setEstanterias(await obtenerEstanterias(depositoSeleccionado));
+      await cargarDepositos();
+    } catch (err) {
+      setError(mensajeDeError(err, 'No se pudo restaurar la estantería.'));
     }
   }
 
@@ -167,40 +218,46 @@ export default function Logistica() {
     try {
       await eliminarEstanteria(id);
       setMensaje('Estantería eliminada correctamente.');
+      if (estanteriaExpandida === id) {
+        setEstanteriaExpandida(null);
+        setContenidoEstanteria([]);
+      }
       setEstanterias(await obtenerEstanterias(depositoSeleccionado));
+      await cargarDepositos();
     } catch (err) {
       setError(mensajeDeError(err, 'No se pudo eliminar: la estantería contiene stock.'));
     }
   }
+
   async function toggleEstanteria(est) {
-  if (estanteriaExpandida === est.id) {
-    setEstanteriaExpandida(null);
-    setContenidoEstanteria([]);
-    return;
+    if (estanteriaExpandida === est.id) {
+      setEstanteriaExpandida(null);
+      setContenidoEstanteria([]);
+      return;
+    }
+
+    try {
+      setLoadingContenido(true);
+      setError('');
+      setEstanteriaExpandida(est.id);
+
+      const data = await obtenerUbicacionesPorEstanteria(est.id);
+      setContenidoEstanteria(data);
+    } catch (err) {
+      setError(
+        mensajeDeError(err, 'No se pudo cargar el contenido de la estantería.')
+      );
+    } finally {
+      setLoadingContenido(false);
+    }
   }
 
-  try {
-    setLoadingContenido(true);
-    setError('');
-
-    const data = await obtenerUbicacionesPorEstanteria(est.id);
-
-    setContenidoEstanteria(data);
-    setEstanteriaExpandida(est.id);
-  } catch (err) {
-    setError(
-      mensajeDeError(err, 'No se pudo cargar el contenido de la estantería.')
-    );
-  } finally {
-    setLoadingContenido(false);
-  }
-}
   return (
     <main className="view logistica-view">
       <header className="page-head">
         <article>
           <h1>Depósitos y estanterías</h1>
-          <p>Gestión de la ubicación física de la mercadería.</p>
+          <p>Módulo de gestión de depositos, estanterías y ubicaciones físicas de stock.</p>
         </article>
         <div className="page-head-actions">
           {pestana === 'depositos' && (
@@ -240,12 +297,21 @@ export default function Logistica() {
           <header className="card-head"><h2><Warehouse size={18} /> Depósitos registrados</h2></header>
           {loadingDepositos ? (
             <p className="loading-state">Cargando...</p>
+          ) : depositos.length === 0 ? (
+            <div className="empty-state">
+              <Warehouse size={48} className="empty-icon" />
+              <h3>No hay depósitos registrados</h3>
+              <p className="muted">Creá el primer depósito para empezar a organizar estanterías y stock.</p>
+            </div>
           ) : (
             <table>
               <thead>
                 <tr>
-                  <th>NOMBRE</th><th>ESTADO</th><th className="num">ESTANTERÍAS</th>
-                  <th className="num">UNIDADES</th><th className="actions-header">ACCIONES</th>
+                  <th>NOMBRE</th>
+                  <th>DESCRIPCIÓN</th>
+                  <th className="num">ESTANTERÍAS</th>
+                  <th className="num">UNIDADES</th>
+                  <th className="actions-header">ACCIONES</th>
                 </tr>
               </thead>
               <tbody>
@@ -254,13 +320,7 @@ export default function Logistica() {
                     <th scope="row" className="row-title">
                       <strong>{d.nombre}</strong>
                     </th>
-
-                    <td>
-                      <span className={`badge ${d.activo ? 'badge-success' : 'badge-danger'}`}>
-                        {d.activo ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-
+                    <td className="muted">{d.descripcion || '—'}</td>
                     <td className="num">{d.cantidadEstanterias}</td>
                     <td className="num">{d.cantidadUnidades}</td>
 
@@ -272,15 +332,6 @@ export default function Logistica() {
                         onClick={() => abrirEditarDeposito(d)}
                       >
                         <Edit3 size={16} />
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn btn-icon"
-                        title={d.activo ? 'Desactivar depósito' : 'Activar depósito'}
-                        onClick={() => handleToggleActivo(d)}
-                      >
-                        <Power size={16} />
                       </button>
 
                       <button
@@ -307,7 +358,7 @@ export default function Logistica() {
             <select className="select-filter" value={depositoSeleccionado}
               onChange={(e) => setDepositoSeleccionado(e.target.value)}>
               <option value="">Seleccioná un depósito...</option>
-              {depositos.filter((d) => d.activo).map((d) => (
+              {depositos.map((d) => (
                 <option key={d.id} value={d.id}>{d.nombre}</option>
               ))}
             </select>
@@ -324,56 +375,85 @@ export default function Logistica() {
           ) : (
             <table>
               <thead>
-                <tr><th>NOMBRE</th><th className="num">UNIDADES</th><th className="actions-header">ACCIONES</th></tr>
+                <tr>
+                  <th>NOMBRE</th>
+                  <th>DESCRIPCIÓN</th>
+                  <th className="num">UBICACIONES</th>
+                  <th className="num">UNIDADES</th>
+                  <th className="actions-header">ACCIONES</th>
+                </tr>
               </thead>
               <tbody>
-              {estanterias.map((est) => (
-                <>
-                  <tr
-                    key={est.id}
-                    className="table-row-hover fila-compra"
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => toggleEstanteria(est)}
-                  >
-                    <th scope="row" className="row-title"><strong>{est.nombre}</strong></th>
-                    <td className="num">{est.cantidadUnidades}</td>
-                    <td className="actions">
-                      <button
-                        className="btn btn-icon danger"
-                        onClick={(e) => { e.stopPropagation(); handleEliminarEstanteria(est.id, est.nombre); }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                  {estanteriaExpandida === est.id && (
-                    <tr className="fila-detalle">
-                      <td colSpan={3}>
-                        <div className="detalle-compra">
-                          {contenidoEstanteria.length === 0 ? (
-                            <p className="muted text-sm">Estantería vacía.</p>
-                          ) : (
-                            <table>
-                              <thead>
-                                <tr><th>SKU</th><th className="num">CANTIDAD</th></tr>
-                              </thead>
-                              <tbody>
-                                {contenidoEstanteria.map((u) => (
-                                  <tr key={u.id}>
-                                    <td><code>{u.sku}</code></td>
-                                    <td className="num">{u.cantidad} u.</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
-                        </div>
+                {estanterias.map((est) => (
+                  <Fragment key={est.id}>
+                    <tr
+                      className="table-row-hover fila-compra"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => toggleEstanteria(est)}
+                      title="Hacé clic para ver las variantes ubicadas en esta estantería"
+                    >
+                      <th scope="row" className="row-title"><strong>{est.nombre}</strong></th>
+                      <td className="muted">{est.descripcion || '—'}</td>
+                      <td className="num">{est.cantidadUbicaciones}</td>
+                      <td className="num">{est.cantidadUnidades}</td>
+                      <td className="actions">
+                        <button
+                          type="button"
+                          className="btn btn-icon"
+                          title="Modificar estantería"
+                          onClick={(e) => { e.stopPropagation(); abrirEditarEstanteria(est); }}
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-icon danger"
+                          title="Dar de baja"
+                          onClick={(e) => { e.stopPropagation(); handleEliminarEstanteria(est.id, est.nombre); }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </>
-              ))}
-            </tbody>
+                    {estanteriaExpandida === est.id && (
+                      <tr className="fila-detalle">
+                        <td colSpan={5}>
+                          <div className="detalle-compra">
+                            {loadingContenido ? (
+                              <p className="muted text-sm">Cargando contenido de la estantería...</p>
+                            ) : contenidoEstanteria.length === 0 ? (
+                              <p className="muted text-sm">Estantería vacía.</p>
+                            ) : (
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>SKU</th>
+                                    <th>PRODUCTO</th>
+                                    <th>TALLE</th>
+                                    <th>COLOR</th>
+                                    <th className="num">CANTIDAD</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {contenidoEstanteria.map((u) => (
+                                    <tr key={u.id}>
+                                      <td><code>{u.sku}</code></td>
+                                      <td>{u.productoNombre || '—'}</td>
+                                      <td><span className="talle-pill">{u.talleNombre || '—'}</span></td>
+                                      <td>{u.colorNombre || '—'}</td>
+                                      <td className="num font-mono">{u.cantidad} u.</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
             </table>
           )}
         </section>
@@ -399,13 +479,13 @@ export default function Logistica() {
               </AlertBanner>
               <label>
                 Nombre *
-                <input type="text" value={formDeposito.nombre}
+                <input type="text" maxLength={100} value={formDeposito.nombre}
                   onChange={(e) => setFormDeposito({ ...formDeposito, nombre: e.target.value })}
                   placeholder="Ej. Depósito Central" required />
               </label>
               <label>
                 Descripción
-                <input type="text" value={formDeposito.descripcion}
+                <input type="text" maxLength={500} value={formDeposito.descripcion}
                   onChange={(e) => setFormDeposito({ ...formDeposito, descripcion: e.target.value })} />
               </label>
               <div className="modal-actions">
@@ -423,21 +503,36 @@ export default function Logistica() {
         <div className="modal-backdrop" onClick={() => setModalEstanteriaAbierto(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
-              <h2>Nueva estantería</h2>
+              <h2>{editandoEstanteriaId ? 'Modificar estantería' : 'Nueva estantería'}</h2>
               <button className="btn-close" onClick={() => setModalEstanteriaAbierto(false)}><X size={18} /></button>
             </header>
             <form onSubmit={handleGuardarEstanteria} className="modal-form">
-              <AlertBanner tipo="danger" mensaje={error} />
+              <AlertBanner tipo="danger" mensaje={error}>
+                {estanteriaRestaurable && (
+                  <div className="alert-restore-actions">
+                    <button type="button" className="btn btn-small"
+                      onClick={() => handleRestaurarEstanteria(estanteriaRestaurable.id, estanteriaRestaurable.nombre)}>
+                      <RotateCcw size={14} /> Restaurar estantería existente
+                    </button>
+                  </div>
+                )}
+              </AlertBanner>
               <label>
                 Nombre *
-                <input type="text" value={formEstanteria.nombre}
+                <input type="text" maxLength={100} value={formEstanteria.nombre}
                   onChange={(e) => setFormEstanteria({ ...formEstanteria, nombre: e.target.value })}
                   placeholder="Ej. A1" required />
+              </label>
+              <label>
+                Descripción
+                <input type="text" maxLength={500} value={formEstanteria.descripcion}
+                  onChange={(e) => setFormEstanteria({ ...formEstanteria, descripcion: e.target.value })}
+                  placeholder="Ej. Pasillo norte - Nivel 1" />
               </label>
               <div className="modal-actions">
                 <button type="button" className="btn" onClick={() => setModalEstanteriaAbierto(false)}>Cancelar</button>
                 <button type="submit" className="btn btn-primary" disabled={guardandoEstanteria}>
-                  {guardandoEstanteria ? 'Guardando...' : 'Crear estantería'}
+                  {guardandoEstanteria ? 'Guardando...' : editandoEstanteriaId ? 'Guardar cambios' : 'Crear estantería'}
                 </button>
               </div>
             </form>
