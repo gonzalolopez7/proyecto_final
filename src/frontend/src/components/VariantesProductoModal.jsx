@@ -11,6 +11,7 @@ import {
   FolderTree,
   Truck,
   Award,
+  MapPin,
 } from 'lucide-react';
 import {
   obtenerVariantesPorProducto,
@@ -31,6 +32,7 @@ import { formatoMoneda } from '../utils/numeroALetras';
 import { mensajeDeError, codigoDeError, datosDeError } from '../services/errores';
 import { expandirHexColor, resumirTallesEscala } from '../utils/validaciones';
 import AlertBanner from './AlertBanner';
+import UbicacionVarianteModal from './UbicacionVarianteModal';
 
 const VARIANTE_INICIAL = {
   sku: '',
@@ -77,6 +79,8 @@ export default function VariantesProductoModal({
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
   const [varianteRestaurable, setVarianteRestaurable] = useState(null);
+
+  const [varianteUbicando, setVarianteUbicando] = useState(null);
 
   const [editandoId, setEditandoId] = useState(null);
   const [form, setForm] = useState(VARIANTE_INICIAL);
@@ -428,6 +432,7 @@ export default function VariantesProductoModal({
   }
 
   return (
+    <>
     <div className="modal-backdrop" onClick={onClose}>
       <div
         className="modal-content modal-xl"
@@ -687,6 +692,14 @@ export default function VariantesProductoModal({
                             >
                               <Trash2 size={16} />
                             </button>
+                            <button
+                              type="button"
+                              className="btn btn-icon"
+                              onClick={() => setVarianteUbicando(v)}
+                              title="Ver y asignar ubicación física"
+                            >
+                              <MapPin size={16} />
+                            </button>
                           </td>
                         </tr>
                       );
@@ -846,6 +859,7 @@ export default function VariantesProductoModal({
                     <tbody>
                       {proveedoresVariante.map((rel, idx) => {
                         const esMejorCosto = idx === 0 && proveedoresVariante.length > 1;
+                        
                         return (
                           <tr
                             key={rel.id}
@@ -889,6 +903,7 @@ export default function VariantesProductoModal({
                               >
                                 <Trash2 size={16} />
                               </button>
+
                             </td>
                           </tr>
                         );
@@ -902,5 +917,13 @@ export default function VariantesProductoModal({
         </div>
       </div>
     </div>
+    {varianteUbicando && (
+      <UbicacionVarianteModal
+        variante={varianteUbicando}
+        onClose={() => setVarianteUbicando(null)}
+      /> 
+      )}
+    </>
   );
+  
 }

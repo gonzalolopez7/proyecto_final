@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { Fragment, useEffect, useState, useCallback } from 'react';
 import { Warehouse, Plus, Edit3, Trash2, X, RotateCcw, Power, FolderTree, RefreshCcw } from 'lucide-react';
 import {
   obtenerDepositos, altaDeposito, modificarDeposito, cambiarEstadoDeposito,
@@ -7,6 +7,7 @@ import {
 } from '../services/logisticaService';
 import { mensajeDeError, codigoDeError, datosDeError } from '../services/errores';
 import AlertBanner from '../components/AlertBanner';
+import { obtenerUbicacionesPorEstanteria } from '../services/logisticaService';
 
 const DEPOSITO_INICIAL = { nombre: '', descripcion: '' };
 const ESTANTERIA_INICIAL = { idDeposito: '', nombre: '', descripcion: '' };
@@ -30,6 +31,10 @@ export default function Logistica() {
   const [modalEstanteriaAbierto, setModalEstanteriaAbierto] = useState(false);
   const [formEstanteria, setFormEstanteria] = useState(ESTANTERIA_INICIAL);
   const [guardandoEstanteria, setGuardandoEstanteria] = useState(false);
+
+  const [estanteriaExpandida, setEstanteriaExpandida] = useState(null);
+  const [contenidoEstanteria, setContenidoEstanteria] = useState([]);
+  const [loadingContenido, setLoadingContenido] = useState(false);
 
   const cargarDepositos = useCallback(async () => {
     try {
@@ -167,7 +172,29 @@ export default function Logistica() {
       setError(mensajeDeError(err, 'No se pudo eliminar: la estantería contiene stock.'));
     }
   }
+  async function toggleEstanteria(est) {
+  if (estanteriaExpandida === est.id) {
+    setEstanteriaExpandida(null);
+    setContenidoEstanteria([]);
+    return;
+  }
 
+  try {
+    setLoadingContenido(true);
+    setError('');
+
+    const data = await obtenerUbicacionesPorEstanteria(est.id);
+
+    setContenidoEstanteria(data);
+    setEstanteriaExpandida(est.id);
+  } catch (err) {
+    setError(
+      mensajeDeError(err, 'No se pudo cargar el contenido de la estantería.')
+    );
+  } finally {
+    setLoadingContenido(false);
+  }
+}
   return (
     <main className="view logistica-view">
       <header className="page-head">
@@ -223,26 +250,45 @@ export default function Logistica() {
               </thead>
               <tbody>
                 {depositos.map((d) => (
-                  <tr key={d.id} className="table-row-hover">
+                  <tr key={d.id}>
                     <th scope="row" className="row-title">
                       <strong>{d.nombre}</strong>
-                      {d.descripcion && <span className="row-secondary-text">{d.descripcion}</span>}
                     </th>
+
                     <td>
-                      <span className={`tag ${d.activo ? 'tag-success' : 'tag-danger'}`}>
+                      <span className={`badge ${d.activo ? 'badge-success' : 'badge-danger'}`}>
                         {d.activo ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
+
                     <td className="num">{d.cantidadEstanterias}</td>
                     <td className="num">{d.cantidadUnidades}</td>
+
                     <td className="actions">
-                      <button className="btn btn-icon" onClick={() => handleToggleActivo(d)} title="Activar/Desactivar">
-                        <Power size={16} />
-                      </button>
-                      <button className="btn btn-icon" onClick={() => abrirEditarDeposito(d)} title="Editar">
+                      <button
+                        type="button"
+                        className="btn btn-icon"
+                        title="Modificar depósito"
+                        onClick={() => abrirEditarDeposito(d)}
+                      >
                         <Edit3 size={16} />
                       </button>
-                      <button className="btn btn-icon danger" onClick={() => handleEliminarDeposito(d.id, d.nombre)} title="Eliminar">
+
+                      <button
+                        type="button"
+                        className="btn btn-icon"
+                        title={d.activo ? 'Desactivar depósito' : 'Activar depósito'}
+                        onClick={() => handleToggleActivo(d)}
+                      >
+                        <Power size={16} />
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn-icon danger"
+                        title="Dar de baja"
+                        onClick={() => handleEliminarDeposito(d.id, d.nombre)}
+                      >
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -281,18 +327,53 @@ export default function Logistica() {
                 <tr><th>NOMBRE</th><th className="num">UNIDADES</th><th className="actions-header">ACCIONES</th></tr>
               </thead>
               <tbody>
-                {estanterias.map((est) => (
-                  <tr key={est.id} className="table-row-hover">
+              {estanterias.map((est) => (
+                <>
+                  <tr
+                    key={est.id}
+                    className="table-row-hover fila-compra"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => toggleEstanteria(est)}
+                  >
                     <th scope="row" className="row-title"><strong>{est.nombre}</strong></th>
                     <td className="num">{est.cantidadUnidades}</td>
                     <td className="actions">
-                      <button className="btn btn-icon danger" onClick={() => handleEliminarEstanteria(est.id, est.nombre)}>
+                      <button
+                        className="btn btn-icon danger"
+                        onClick={(e) => { e.stopPropagation(); handleEliminarEstanteria(est.id, est.nombre); }}
+                      >
                         <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>
-                ))}
-              </tbody>
+                  {estanteriaExpandida === est.id && (
+                    <tr className="fila-detalle">
+                      <td colSpan={3}>
+                        <div className="detalle-compra">
+                          {contenidoEstanteria.length === 0 ? (
+                            <p className="muted text-sm">Estantería vacía.</p>
+                          ) : (
+                            <table>
+                              <thead>
+                                <tr><th>SKU</th><th className="num">CANTIDAD</th></tr>
+                              </thead>
+                              <tbody>
+                                {contenidoEstanteria.map((u) => (
+                                  <tr key={u.id}>
+                                    <td><code>{u.sku}</code></td>
+                                    <td className="num">{u.cantidad} u.</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+            </tbody>
             </table>
           )}
         </section>
