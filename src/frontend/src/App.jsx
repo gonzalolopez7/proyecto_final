@@ -11,6 +11,7 @@ import Dashboard from './views/Dashboard';
 import Proveedores from './views/Proveedores';
 import Usuarios from './views/Usuarios';
 import Productos from './views/Productos';
+import Logistica from './views/Logistica';
 
 function AppLayout() {
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -34,6 +35,9 @@ function AppLayout() {
 
             <Route element={<ProtectedRoute roles={PERMISOS.usuarios} />}>
               <Route path="/usuarios" element={<Usuarios />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={PERMISOS.logistica} />}>
+              <Route path="/logistica" element={<Logistica />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

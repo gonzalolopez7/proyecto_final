@@ -37,6 +37,7 @@ export const PERMISOS = {
   proveedores: ['Admin', 'Encargado', 'Comprador'],
   usuarios: ['Admin', 'Encargado'],
   productos: ['Admin', 'Encargado', 'OperadorInventario', 'Comprador'],
+  logistica: ['Admin', 'Encargado', 'OperadorLogistica'],
 };
 
 function normalizarClaveRol(rol = '') {
