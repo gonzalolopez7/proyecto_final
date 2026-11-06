@@ -11,7 +11,7 @@
 - Ids: 36
 - Códigos (SKU): 50
 - Nombres principales (Productos, Proveedores, Razón Social): 200
-- Nombres estándar (Categorías): 100
+- Nombres estándar (Categorías, Depósitos, Estanterías): 100
 - Nombres de catálogos/atributos (Color, Talle, Fit, Material, Temporada, Género, EscalaTalle): 50 
 - Descripciones / Direcciones: 500
 - Emails/Usernames: 256

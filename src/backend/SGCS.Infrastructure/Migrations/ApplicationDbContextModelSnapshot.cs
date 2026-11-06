@@ -173,16 +173,12 @@ namespace SGCS.Infrastructure.Migrations
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<bool>("Activo")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DeletedBy")
-                        .HasColumnType("text");
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
 
                     b.Property<string>("Descripcion")
                         .HasMaxLength(500)
@@ -195,8 +191,8 @@ namespace SGCS.Infrastructure.Migrations
 
                     b.Property<string>("Nombre")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
@@ -235,7 +231,8 @@ namespace SGCS.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DeletedBy")
-                        .HasColumnType("text");
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
 
                     b.Property<string>("Descripcion")
                         .HasMaxLength(500)
@@ -815,7 +812,7 @@ namespace SGCS.Infrastructure.Migrations
             modelBuilder.Entity("SGCS.Domain.Entities.Estanteria", b =>
                 {
                     b.HasOne("SGCS.Domain.Entities.Deposito", "Deposito")
-                        .WithMany("Estanterias")
+                        .WithMany()
                         .HasForeignKey("IdDeposito")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -884,7 +881,7 @@ namespace SGCS.Infrastructure.Migrations
             modelBuilder.Entity("SGCS.Domain.Entities.Ubicacion", b =>
                 {
                     b.HasOne("SGCS.Domain.Entities.Estanteria", "Estanteria")
-                        .WithMany("Ubicaciones")
+                        .WithMany()
                         .HasForeignKey("IdEstanteria")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -968,16 +965,6 @@ namespace SGCS.Infrastructure.Migrations
             modelBuilder.Entity("SGCS.Domain.Entities.Categoria", b =>
                 {
                     b.Navigation("Subcategorias");
-                });
-
-            modelBuilder.Entity("SGCS.Domain.Entities.Deposito", b =>
-                {
-                    b.Navigation("Estanterias");
-                });
-
-            modelBuilder.Entity("SGCS.Domain.Entities.Estanteria", b =>
-                {
-                    b.Navigation("Ubicaciones");
                 });
 
             modelBuilder.Entity("SGCS.Infrastructure.Identity.ApplicationRole", b =>
