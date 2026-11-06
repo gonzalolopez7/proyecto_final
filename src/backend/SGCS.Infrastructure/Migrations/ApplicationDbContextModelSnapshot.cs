@@ -167,6 +167,45 @@ namespace SGCS.Infrastructure.Migrations
                     b.ToTable("Colores");
                 });
 
+            modelBuilder.Entity("SGCS.Domain.Entities.Deposito", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Depositos");
+                });
+
             modelBuilder.Entity("SGCS.Domain.Entities.EscalaTalle", b =>
                 {
                     b.Property<string>("Id")
@@ -184,6 +223,45 @@ namespace SGCS.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("EscalasTalles");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Estanteria", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("IdDeposito")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdDeposito", "Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Estanterias");
                 });
 
             modelBuilder.Entity("SGCS.Domain.Entities.Fit", b =>
@@ -423,6 +501,37 @@ namespace SGCS.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Temporadas");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Ubicacion", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<int>("Cantidad")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("IdEstanteria")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("IdVariante")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdEstanteria");
+
+                    b.HasIndex("IdVariante", "IdEstanteria")
+                        .IsUnique();
+
+                    b.ToTable("Ubicaciones");
                 });
 
             modelBuilder.Entity("SGCS.Domain.Entities.Variante", b =>
@@ -703,6 +812,17 @@ namespace SGCS.Infrastructure.Migrations
                     b.Navigation("Padre");
                 });
 
+            modelBuilder.Entity("SGCS.Domain.Entities.Estanteria", b =>
+                {
+                    b.HasOne("SGCS.Domain.Entities.Deposito", "Deposito")
+                        .WithMany("Estanterias")
+                        .HasForeignKey("IdDeposito")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Deposito");
+                });
+
             modelBuilder.Entity("SGCS.Domain.Entities.Producto", b =>
                 {
                     b.HasOne("SGCS.Domain.Entities.Categoria", "Categoria")
@@ -759,6 +879,25 @@ namespace SGCS.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("EscalaTalle");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Ubicacion", b =>
+                {
+                    b.HasOne("SGCS.Domain.Entities.Estanteria", "Estanteria")
+                        .WithMany("Ubicaciones")
+                        .HasForeignKey("IdEstanteria")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SGCS.Domain.Entities.Variante", "Variante")
+                        .WithMany()
+                        .HasForeignKey("IdVariante")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Estanteria");
+
+                    b.Navigation("Variante");
                 });
 
             modelBuilder.Entity("SGCS.Domain.Entities.Variante", b =>
@@ -829,6 +968,16 @@ namespace SGCS.Infrastructure.Migrations
             modelBuilder.Entity("SGCS.Domain.Entities.Categoria", b =>
                 {
                     b.Navigation("Subcategorias");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Deposito", b =>
+                {
+                    b.Navigation("Estanterias");
+                });
+
+            modelBuilder.Entity("SGCS.Domain.Entities.Estanteria", b =>
+                {
+                    b.Navigation("Ubicaciones");
                 });
 
             modelBuilder.Entity("SGCS.Infrastructure.Identity.ApplicationRole", b =>

@@ -21,5 +21,8 @@ public interface IApplicationDbContext
     DbSet<Talle> Talles { get; }
     DbSet<Color> Colores { get; }
 
+    DbSet<Deposito> Depositos { get; }
+    DbSet<Estanteria> Estanterias { get; }
+    DbSet<Ubicacion> Ubicaciones { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

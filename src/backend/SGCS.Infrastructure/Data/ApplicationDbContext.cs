@@ -50,6 +50,10 @@ public class ApplicationDbContext : IdentityDbContext<
     public DbSet<Talle> Talles => Set<Talle>();
     public DbSet<Color> Colores => Set<Color>();
 
+    public DbSet<Deposito> Depositos => Set<Deposito>();
+    public DbSet<Estanteria> Estanterias => Set<Estanteria>();
+    public DbSet<Ubicacion> Ubicaciones => Set<Ubicacion>();
+
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return await base.SaveChangesAsync(cancellationToken);
