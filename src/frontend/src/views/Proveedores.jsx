@@ -329,7 +329,7 @@ export default function Proveedores() {
             <p>
               {busqueda
                 ? `No hay proveedores que coincidan con la búsqueda "${busqueda}".`
-                : 'Comenzá registrando el primer proveedor para gestionar compras y precios.'}
+                : 'Comenzá registrando el primer proveedor.'}
             </p>
           </div>
         ) : (

@@ -13,9 +13,11 @@ import {
   Palette,
   RotateCcw,
   RefreshCcw,
+  Truck,
 } from 'lucide-react';
 import {
   obtenerProductos,
+  obtenerProductoPorId,
   altaProducto,
   modificarProducto,
   eliminarProducto,
@@ -44,7 +46,9 @@ import { mensajeDeError, codigoDeError, datosDeError } from '../services/errores
 import { expandirHexColor, resumirTallesEscala } from '../utils/validaciones';
 import AlertBanner from '../components/AlertBanner';
 import PaginationBar from '../components/PaginationBar';
-import VariantesProductoModal from '../components/VariantesProductoModal';
+import BreadcrumbNav from '../components/BreadcrumbNav';
+import ProductoVariantesView from '../components/ProductoVariantesView';
+import VariantePreciosView from '../components/VariantePreciosView';
 
 const PRODUCTO_INICIAL = {
   nombre: '',
@@ -130,7 +134,37 @@ export default function Productos() {
   const [productos, setProductos] = useState([]);
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [productoRestaurable, setProductoRestaurable] = useState(null);
-  const [productoVariantesActivo, setProductoVariantesActivo] = useState(null);
+
+  // Navegación jerárquica (drill-down): 'productos' | 'variantes' | 'costos'
+  const [drillDown, setDrillDown] = useState({
+    nivel: 'productos',
+    producto: null,
+    variante: null,
+  });
+
+  function irAVariantes(prod) {
+    setDrillDown({ nivel: 'variantes', producto: prod, variante: null });
+    setError('');
+    setMensaje('');
+  }
+
+  function irACostos(variante) {
+    setDrillDown((actual) => ({ ...actual, nivel: 'costos', variante }));
+    setError('');
+    setMensaje('');
+  }
+
+  function volverAProductos() {
+    setDrillDown({ nivel: 'productos', producto: null, variante: null });
+    setError('');
+    setMensaje('');
+  }
+
+  function volverAVariantes() {
+    setDrillDown((actual) => ({ ...actual, nivel: 'variantes', variante: null }));
+    setError('');
+    setMensaje('');
+  }
 
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
@@ -393,13 +427,44 @@ export default function Productos() {
       if (editandoProductoId) {
         await modificarProducto(editandoProductoId, formProducto);
         setMensaje('Producto modificado exitosamente.');
+        setModalProductoAbierto(false);
+        await cargarProductos(pagina);
       } else {
-        await altaProducto(formProducto);
-        setMensaje('Producto registrado con éxito.');
-      }
+        const resp = await altaProducto(formProducto);
+        const idCreado = typeof resp === 'string' ? resp : resp?.id;
+        let nuevoProd = null;
+        if (idCreado) {
+          try {
+            nuevoProd = await obtenerProductoPorId(idCreado);
+          } catch (errProd) {
+            console.error('Error al obtener el producto recién creado:', errProd);
+          }
+        }
+        if (!nuevoProd) {
+          const cat = categorias.find((c) => c.id === formProducto.idCategoria);
+          const esc = escalasTalle.find((e) => e.id === formProducto.idEscalaTalle);
+          const gen = generos.find((g) => g.id === formProducto.idGenero);
+          const temp = temporadas.find((t) => t.id === formProducto.idTemporada);
+          const fit = fits.find((f) => f.id === formProducto.idFit);
+          const mat = materiales.find((m) => m.id === formProducto.idMaterial);
+          nuevoProd = {
+            id: idCreado,
+            ...formProducto,
+            categoriaNombre: cat?.nombre || 'Sin categoría',
+            escalaTalleNombre: esc?.nombre || 'Sin escala',
+            generoNombre: gen?.nombre || null,
+            temporadaNombre: temp?.nombre || null,
+            fitNombre: fit?.nombre || null,
+            materialNombre: mat?.nombre || null,
+          };
+        }
 
-      setModalProductoAbierto(false);
-      await cargarProductos(pagina);
+        setModalProductoAbierto(false);
+        setFormProducto(PRODUCTO_INICIAL);
+        setEditandoProductoId(null);
+        cargarProductos(pagina);
+        irAVariantes(nuevoProd);
+      }
     } catch (err) {
       console.error(err);
       const cod = codigoDeError(err);
@@ -710,81 +775,135 @@ export default function Productos() {
     modalProductoAbierto ||
     modalCategoriaAbierto ||
     modalAtributoAbierto ||
-    modalColorAbierto ||
-    Boolean(productoVariantesActivo);
+    modalColorAbierto;
 
   return (
     <main className="view productos-view">
-      <header className="page-head">
-        <article>
-          <h1>Productos</h1>
-          <p>
-            Módulo de gestión de productos, variantes, categorías y atributos
-          </p>
-        </article>
+      {/* Cabecera contextual según nivel de navegación jerárquica */}
+      {drillDown.nivel === 'variantes' && (
+        <header className="page-head">
+          <article>
+            <BreadcrumbNav
+              onBack={volverAProductos}
+              items={[
+                { label: 'Productos', onClick: volverAProductos, icon: Shirt },
+                { label: `${drillDown.producto?.nombre}`, icon: Layers },
+              ]}
+            />
+            <h1>Variantes de producto</h1>
+          </article>
+        </header>
+      )}
 
-        <div className="page-head-actions">
-          {pestanaActiva === 'productos' && (
-            <>
-              <button type="button" className="btn btn-primary" onClick={abrirNuevoProducto}>
-                <Plus size={16} />
-                Nuevo producto
-              </button>
-              <button
-                className="btn"
-                type="button"
-                onClick={() => cargarProductos(pagina)}
-              >
-                <RefreshCcw size={16} />
-                Actualizar listado
-              </button>
-            </>
-          )}
+      {drillDown.nivel === 'costos' && (
+        <header className="page-head">
+          <article>
+            <BreadcrumbNav
+              onBack={volverAVariantes}
+              items={[
+                { label: 'Productos', onClick: volverAProductos, icon: Shirt },
+                { label: drillDown.producto?.nombre, onClick: volverAVariantes, icon: Layers },
+                { label: `Variante ${drillDown.variante?.sku}`, icon: Truck },
+              ]}
+            />
+            <h1>Precios de variante</h1>
+          </article>
+        </header>
+      )}
 
-          {pestanaActiva === 'categorias' && (
-            <>
-              <button type="button" className="btn btn-primary" onClick={abrirNuevaCategoria}>
-                <Plus size={16} />
-                Nueva categoría
-              </button>
-              <button
-                className="btn"
-                type="button"
-                onClick={cargarCatalogosMaestros}
-              >
-                <RefreshCcw size={16} />
-                Actualizar listado
-              </button>
-            </>
-          )}
+      {drillDown.nivel === 'productos' && (
+        <header className="page-head">
+          <article>
+            <h1>Productos</h1>
+            <p>
+              Módulo de gestión de productos, variantes, categorías y atributos
+            </p>
+          </article>
 
-          {pestanaActiva === 'atributos' && (
-            <>
-              {metaAtributo.nuevoLabel && (
-                <button type="button" className="btn btn-primary" onClick={abrirNuevoAtributo}>
+          <div className="page-head-actions">
+            {pestanaActiva === 'productos' && (
+              <>
+                <button type="button" className="btn btn-primary" onClick={abrirNuevoProducto}>
                   <Plus size={16} />
-                  {metaAtributo.nuevoLabel}
+                  Nuevo producto
                 </button>
-              )}
-              <button
-                className="btn"
-                type="button"
-                onClick={cargarCatalogosMaestros}
-              >
-                <RefreshCcw size={16} />
-                Actualizar listado
-              </button>
-            </>
-          )}
-        </div>
-      </header>
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => cargarProductos(pagina)}
+                >
+                  <RefreshCcw size={16} />
+                  Actualizar
+                </button>
+              </>
+            )}
 
-      <AlertBanner
-        tipo="success"
-        mensaje={mensaje}
-        onClose={() => setMensaje('')}
-      />
-      {!algunModalAbierto && (
+            {pestanaActiva === 'categorias' && (
+              <>
+                <button type="button" className="btn btn-primary" onClick={abrirNuevaCategoria}>
+                  <Plus size={16} />
+                  Nueva categoría
+                </button>
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={cargarCatalogosMaestros}
+                >
+                  <RefreshCcw size={16} />
+                  Actualizar
+                </button>
+              </>
+            )}
+
+            {pestanaActiva === 'atributos' && (
+              <>
+                {metaAtributo.nuevoLabel && (
+                  <button type="button" className="btn btn-primary" onClick={abrirNuevoAtributo}>
+                    <Plus size={16} />
+                    {metaAtributo.nuevoLabel}
+                  </button>
+                )}
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={cargarCatalogosMaestros}
+                >
+                  <RefreshCcw size={16} />
+                  Actualizar
+                </button>
+              </>
+            )}
+
+            {pestanaActiva === 'talles_colores' && (
+              <>
+                {tipoAtributo === 'colores' && (
+                  <button type="button" className="btn btn-primary" onClick={abrirNuevoAtributo}>
+                    <Plus size={16} />
+                    Nuevo color
+                  </button>
+                )}
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={cargarCatalogosMaestros}
+                >
+                  <RefreshCcw size={16} />
+                  Actualizar
+                </button>
+              </>
+            )}
+          </div>
+        </header>
+      )}
+
+      {drillDown.nivel === 'productos' && (
+        <AlertBanner
+          tipo="success"
+          mensaje={mensaje}
+          onClose={() => setMensaje('')}
+        />
+      )}
+      {drillDown.nivel === 'productos' && !algunModalAbierto && (
         <AlertBanner
           tipo="danger"
           mensaje={error}
@@ -792,224 +911,371 @@ export default function Productos() {
         />
       )}
 
-      {/* Selector de Pestañas Superiores */}
-      <nav className="compras-tabs">
-        <button
-          type="button"
-          className={`btn${pestanaActiva === 'productos' ? ' btn-primary' : ''}`}
-          onClick={() => { setPestanaActiva('productos'); setError(''); }}
-        >
-          <Shirt size={16} />
-          Productos ({totalItems})
-        </button>
-        <button
-          type="button"
-          className={`btn${pestanaActiva === 'categorias' ? ' btn-primary' : ''}`}
-          onClick={() => { setPestanaActiva('categorias'); setError(''); }}
-        >
-          <FolderTree size={16} />
-          Categorías ({categorias.length})
-        </button>
-        <button
-          type="button"
-          className={`btn${pestanaActiva === 'atributos' ? ' btn-primary' : ''}`}
-          onClick={() => { setPestanaActiva('atributos'); setError(''); }}
-        >
-          <Tags size={16} />
-          Atributos y catálogos
-        </button>
-      </nav>
+      {/* VISTA SECUENCIAL DRILL-DOWN: NIVEL 2 (VARIANTES) */}
+      {drillDown.nivel === 'variantes' && (
+        <ProductoVariantesView
+          producto={drillDown.producto}
+          colores={colores}
+          onIrACostos={irACostos}
+        />
+      )}
 
-      {/* =========================================================
+      {/* VISTA SECUENCIAL DRILL-DOWN: NIVEL 3 (PROVEEDORES Y COSTOS) */}
+      {drillDown.nivel === 'costos' && (
+        <VariantePreciosView
+          producto={drillDown.producto}
+          variante={drillDown.variante}
+          onVolver={volverAVariantes}
+        />
+      )}
+
+      {/* VISTA PRINCIPAL: NIVEL 1 (PRODUCTOS / CATEGORÍAS / ATRIBUTOS / TALLES Y COLORES) */}
+      {drillDown.nivel === 'productos' && (
+        <>
+          {/* Selector de Pestañas Superiores */}
+          <nav className="compras-tabs">
+            <button
+              type="button"
+              className={`btn${pestanaActiva === 'productos' ? ' btn-primary' : ''}`}
+              onClick={() => { setPestanaActiva('productos'); setError(''); }}
+            >
+              <Shirt size={16} />
+              Productos ({totalItems})
+            </button>
+            <button
+              type="button"
+              className={`btn${pestanaActiva === 'categorias' ? ' btn-primary' : ''}`}
+              onClick={() => { setPestanaActiva('categorias'); setError(''); }}
+            >
+              <FolderTree size={16} />
+              Categorías ({categorias.length})
+            </button>
+            <button
+              type="button"
+              className={`btn${pestanaActiva === 'atributos' ? ' btn-primary' : ''}`}
+              onClick={() => {
+                setPestanaActiva('atributos');
+                if (!['generos', 'temporadas', 'fits', 'materiales'].includes(tipoAtributo)) {
+                  setTipoAtributo('generos');
+                }
+                setBusquedaAtributo('');
+                setError('');
+              }}
+            >
+              <Tags size={16} />
+              Atributos
+            </button>
+            <button
+              type="button"
+              className={`btn${pestanaActiva === 'talles_colores' ? ' btn-primary' : ''}`}
+              onClick={() => {
+                setPestanaActiva('talles_colores');
+                if (!['colores', 'escalas'].includes(tipoAtributo)) {
+                  setTipoAtributo('colores');
+                }
+                setBusquedaAtributo('');
+                setError('');
+              }}
+            >
+              <Palette size={16} />
+              Talles y colores
+            </button>
+          </nav>
+
+          {/* =========================================================
           CONTENIDO: PESTAÑA PRODUCTOS
           ========================================================= */}
-      {pestanaActiva === 'productos' && (
-        <>
-          <section className="catalog-filters">
-            <div className="filter-controls">
-              <select
-                className="select-filter"
-                value={filtroCategoria}
-                onChange={(e) => { setFiltroCategoria(e.target.value); setPagina(1); }}
-              >
-                <option value="">Todas las categorías</option>
-                {categorias.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
-                ))}
-              </select>
+          {pestanaActiva === 'productos' && (
+            <>
+              <section className="catalog-filters">
+                <div className="filter-controls">
+                  <select
+                    className="select-filter"
+                    value={filtroCategoria}
+                    onChange={(e) => { setFiltroCategoria(e.target.value); setPagina(1); }}
+                  >
+                    <option value="">Todas las categorías</option>
+                    {categorias.map((c) => (
+                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                    ))}
+                  </select>
 
-              <select
-                className="select-filter"
-                value={filtroGenero}
-                onChange={(e) => { setFiltroGenero(e.target.value); setPagina(1); }}
-              >
-                <option value="">Todos los géneros</option>
-                {generos.map((g) => (
-                  <option key={g.id} value={g.id}>{g.nombre}</option>
-                ))}
-              </select>
+                  <select
+                    className="select-filter"
+                    value={filtroGenero}
+                    onChange={(e) => { setFiltroGenero(e.target.value); setPagina(1); }}
+                  >
+                    <option value="">Todos los géneros</option>
+                    {generos.map((g) => (
+                      <option key={g.id} value={g.id}>{g.nombre}</option>
+                    ))}
+                  </select>
 
-              <select
-                className="select-filter"
-                value={filtroTemporada}
-                onChange={(e) => { setFiltroTemporada(e.target.value); setPagina(1); }}
-              >
-                <option value="">Todas las temporadas</option>
-                {temporadas.map((t) => (
-                  <option key={t.id} value={t.id}>{t.nombre}</option>
-                ))}
-              </select>
+                  <select
+                    className="select-filter"
+                    value={filtroTemporada}
+                    onChange={(e) => { setFiltroTemporada(e.target.value); setPagina(1); }}
+                  >
+                    <option value="">Todas las temporadas</option>
+                    {temporadas.map((t) => (
+                      <option key={t.id} value={t.id}>{t.nombre}</option>
+                    ))}
+                  </select>
 
-              <select
-                className="select-filter"
-                value={filtroFit}
-                onChange={(e) => { setFiltroFit(e.target.value); setPagina(1); }}
-              >
-                <option value="">Todos los fits</option>
-                {fits.map((f) => (
-                  <option key={f.id} value={f.id}>{f.nombre}</option>
-                ))}
-              </select>
+                  <select
+                    className="select-filter"
+                    value={filtroFit}
+                    onChange={(e) => { setFiltroFit(e.target.value); setPagina(1); }}
+                  >
+                    <option value="">Todos los fits</option>
+                    {fits.map((f) => (
+                      <option key={f.id} value={f.id}>{f.nombre}</option>
+                    ))}
+                  </select>
 
-              <select
-                className="select-filter"
-                value={filtroMaterial}
-                onChange={(e) => { setFiltroMaterial(e.target.value); setPagina(1); }}
-              >
-                <option value="">Todos los materiales</option>
-                {materiales.map((m) => (
-                  <option key={m.id} value={m.id}>{m.nombre}</option>
-                ))}
-              </select>
+                  <select
+                    className="select-filter"
+                    value={filtroMaterial}
+                    onChange={(e) => { setFiltroMaterial(e.target.value); setPagina(1); }}
+                  >
+                    <option value="">Todos los materiales</option>
+                    {materiales.map((m) => (
+                      <option key={m.id} value={m.id}>{m.nombre}</option>
+                    ))}
+                  </select>
 
-              {hayFiltrosActivos && (
-                <button
-                  type="button"
-                  className="btn btn-small"
-                  onClick={limpiarFiltrosProductos}
-                  title="Limpiar filtros"
-                >
-                  <X size={14} /> Limpiar filtros
-                </button>
-              )}
-            </div>
-          </section>
+                  {hayFiltrosActivos && (
+                    <button
+                      type="button"
+                      className="btn btn-small"
+                      onClick={limpiarFiltrosProductos}
+                      title="Limpiar filtros"
+                    >
+                      <X size={14} /> Limpiar filtros
+                    </button>
+                  )}
+                </div>
+              </section>
 
-          <section className="card">
-            <header className="card-head">
-              <div>
-                <h2>
-                  <Shirt size={18} />
-                  Productos registrados ({totalItems})
-                </h2>
-              </div>
-              <div className="filter-search-box">
-                <Search size={14} className="filter-icon" />
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o descripción..."
-                  value={busqueda}
-                  onChange={(e) => {
-                    setBusqueda(e.target.value);
-                    setPagina(1);
-                  }}
-                />
-              </div>
-            </header>
+              <section className="card">
+                <header className="card-head">
+                  <div>
+                    <h2>
+                      <Shirt size={18} />
+                      Productos registrados ({totalItems})
+                    </h2>
+                  </div>
+                  <div className="filter-search-box">
+                    <Search size={14} className="filter-icon" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre o descripción..."
+                      value={busqueda}
+                      onChange={(e) => {
+                        setBusqueda(e.target.value);
+                        setPagina(1);
+                      }}
+                    />
+                  </div>
+                </header>
 
-            {loadingProductos ? (
-              <p className="loading-state">Cargando productos...</p>
-            ) : productos.length === 0 ? (
-              <div className="empty-state">
-                <Shirt size={48} className="empty-icon" />
-                <h3>No se encontraron productos</h3>
-                <p>Comenzá registrando el primer producto o modificá los filtros de búsqueda.</p>
-              </div>
-            ) : (
-              <>
+                {loadingProductos ? (
+                  <p className="loading-state">Cargando productos...</p>
+                ) : productos.length === 0 ? (
+                  <div className="empty-state">
+                    <Shirt size={48} className="empty-icon" />
+                    <h3>No se encontraron productos</h3>
+                    <p>
+                      {busqueda || hayFiltrosActivos
+                        ? busqueda
+                          ? `No hay productos que coincidan con la búsqueda "${busqueda}"${hayFiltrosActivos ? ' y los filtros aplicados' : ''}.`
+                          : 'No hay productos que coincidan con los filtros aplicados.'
+                        : 'Comenzá registrando el primer producto.'}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th scope="col">PRODUCTO / DESCRIPCIÓN</th>
+                            <th scope="col">CATEGORÍA</th>
+                            <th scope="col">ESCALA DE TALLES</th>
+                            <th scope="col">ATRIBUTOS</th>
+                            <th scope="col" className="actions-header">ACCIONES</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {productos.map((prod) => (
+                            <tr key={prod.id} className="table-row-hover">
+                              <th scope="row" className="row-title">
+                                <div className="row-stack">
+                                  <strong className="row-primary-text">{prod.nombre}</strong>
+                                  <span className="row-secondary-text">
+                                    {prod.descripcion}
+                                  </span>
+                                </div>
+                              </th>
+                              <td>
+                                <span className="category-pill category-pill-icon">
+                                  <FolderTree size={12} />
+                                  {prod.categoriaNombre}
+                                </span>
+                              </td>
+                              <td>
+                                <span className="category-pill category-pill-icon" title="Escala de talles asignada">
+                                  <Ruler size={12} />
+                                  {prod.escalaTalleNombre}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="pill-list">
+                                  {prod.generoNombre && (
+                                    <span className="category-pill" title="Género">
+                                      {prod.generoNombre}
+                                    </span>
+                                  )}
+                                  {prod.temporadaNombre && (
+                                    <span className="category-pill" title="Temporada">
+                                      {prod.temporadaNombre}
+                                    </span>
+                                  )}
+                                  {prod.fitNombre && (
+                                    <span className="category-pill" title="Fit">
+                                      {prod.fitNombre}
+                                    </span>
+                                  )}
+                                  {prod.materialNombre && (
+                                    <span className="category-pill" title="Material">
+                                      {prod.materialNombre}
+                                    </span>
+                                  )}
+                                  {!prod.generoNombre && !prod.temporadaNombre && !prod.fitNombre && !prod.materialNombre && (
+                                    <span className="muted text-sm">—</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="actions">
+                                <button
+                                  type="button"
+                                  className="btn btn-small"
+                                  onClick={() => irAVariantes(prod)}
+                                  title="Gestionar variantes de talle y color"
+                                >
+                                  <Layers size={14} /> Variantes
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-icon"
+                                  onClick={() => abrirEditarProducto(prod)}
+                                  title="Editar producto"
+                                >
+                                  <Edit3 size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-icon danger"
+                                  onClick={() => handleEliminarProducto(prod.id, prod.nombre)}
+                                  title="Dar de baja producto"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <PaginationBar
+                      pagina={pagina}
+                      totalPaginas={totalPaginas}
+                      totalItems={totalItems}
+                      etiquetaItem="productos"
+                      onPageChange={setPagina}
+                    />
+                  </>
+                )}
+              </section>
+            </>
+          )}
+
+          {/* =========================================================
+          CONTENIDO: PESTAÑA CATEGORÍAS
+          ========================================================= */}
+          {pestanaActiva === 'categorias' && (
+            <section className="card">
+              <header className="card-head">
+                <div>
+                  <h2>
+                    <FolderTree size={18} />
+                    Categorías registradas ({categorias.length})
+                  </h2>
+                </div>
+
+                <div className="filter-search-box">
+                  <Search size={14} className="filter-icon" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre..."
+                    value={busquedaCategoria}
+                    onChange={(e) => setBusquedaCategoria(e.target.value)}
+                  />
+                </div>
+              </header>
+
+              {categoriasFiltradas.length === 0 ? (
+                <div className="empty-state">
+                  <FolderTree size={48} className="empty-icon" />
+                  <h3>No se encontraron categorías</h3>
+                  <p>
+                    {busquedaCategoria
+                      ? `No hay categorías que coincidan con la búsqueda "${busquedaCategoria}".`
+                      : 'Creá categorías y subcategorías (ej. Remeras, Pantalones, Camperas) para clasificar los productos.'}
+                  </p>
+                </div>
+              ) : (
                 <div className="table-scroll">
                   <table>
                     <thead>
                       <tr>
-                        <th scope="col">PRODUCTO / DESCRIPCIÓN</th>
                         <th scope="col">CATEGORÍA</th>
-                        <th scope="col">ESCALA DE TALLES</th>
-                        <th scope="col">ATRIBUTOS</th>
+                        <th scope="col">CATEGORÍA PADRE (JERARQUÍA)</th>
                         <th scope="col" className="actions-header">ACCIONES</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {productos.map((prod) => (
-                        <tr key={prod.id} className="table-row-hover">
+                      {categoriasFiltradas.map((cat) => (
+                        <tr key={cat.id} className="table-row-hover">
                           <th scope="row" className="row-title">
-                            <div className="row-stack">
-                              <strong className="row-primary-text">{prod.nombre}</strong>
-                              <span className="row-secondary-text">
-                                {prod.descripcion}
-                              </span>
-                            </div>
+                            <strong>{cat.nombre}</strong>
                           </th>
                           <td>
-                            <span className="category-pill category-pill-icon">
-                              <FolderTree size={12} />
-                              {prod.categoriaNombre}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="category-pill category-pill-icon" title="Escala de talles asignada">
-                              <Ruler size={12} />
-                              {prod.escalaTalleNombre}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="pill-list">
-                              {prod.generoNombre && (
-                                <span className="category-pill" title="Género">
-                                  {prod.generoNombre}
-                                </span>
-                              )}
-                              {prod.temporadaNombre && (
-                                <span className="category-pill" title="Temporada">
-                                  {prod.temporadaNombre}
-                                </span>
-                              )}
-                              {prod.fitNombre && (
-                                <span className="category-pill" title="Fit">
-                                  {prod.fitNombre}
-                                </span>
-                              )}
-                              {prod.materialNombre && (
-                                <span className="category-pill" title="Material">
-                                  {prod.materialNombre}
-                                </span>
-                              )}
-                              {!prod.generoNombre && !prod.temporadaNombre && !prod.fitNombre && !prod.materialNombre && (
-                                <span className="muted text-sm">—</span>
-                              )}
-                            </div>
+                            {cat.padreNombre ? (
+                              <span className="category-pill category-pill-icon">
+                                <FolderTree size={12} /> {cat.padreNombre}
+                              </span>
+                            ) : (
+                              <span>
+                                –
+                              </span>
+                            )}
                           </td>
                           <td className="actions">
                             <button
                               type="button"
-                              className="btn btn-small"
-                              onClick={() => setProductoVariantesActivo(prod)}
-                              title="Gestionar variantes de talle y color"
-                            >
-                              <Layers size={14} /> Variantes
-                            </button>
-                            <button
-                              type="button"
                               className="btn btn-icon"
-                              onClick={() => abrirEditarProducto(prod)}
-                              title="Editar producto"
+                              onClick={() => abrirEditarCategoria(cat)}
+                              title="Editar categoría"
                             >
                               <Edit3 size={16} />
                             </button>
                             <button
                               type="button"
                               className="btn btn-icon danger"
-                              onClick={() => handleEliminarProducto(prod.id, prod.nombre)}
-                              title="Dar de baja producto"
+                              onClick={() => handleEliminarCategoria(cat.id, cat.nombre)}
+                              title="Eliminar categoría"
                             >
                               <Trash2 size={16} />
                             </button>
@@ -1019,317 +1285,281 @@ export default function Productos() {
                     </tbody>
                   </table>
                 </div>
-
-                <PaginationBar
-                  pagina={pagina}
-                  totalPaginas={totalPaginas}
-                  totalItems={totalItems}
-                  etiquetaItem="productos"
-                  onPageChange={setPagina}
-                />
-              </>
-            )}
-          </section>
-        </>
-      )}
-
-      {/* =========================================================
-          CONTENIDO: PESTAÑA CATEGORÍAS
-          ========================================================= */}
-      {pestanaActiva === 'categorias' && (
-        <section className="card">
-          <header className="card-head">
-            <div>
-              <h2>
-                <FolderTree size={18} />
-                Categorías registradas ({categorias.length})
-              </h2>
-            </div>
-
-            <div className="filter-search-box">
-              <Search size={14} className="filter-icon" />
-              <input
-                type="text"
-                placeholder="Buscar por nombre..."
-                value={busquedaCategoria}
-                onChange={(e) => setBusquedaCategoria(e.target.value)}
-              />
-            </div>
-          </header>
-
-          {categoriasFiltradas.length === 0 ? (
-            <div className="empty-state">
-              <FolderTree size={48} className="empty-icon" />
-              <h3>No se encontraron categorías</h3>
-              <p>Creá categorías y subcategorías (ej. Remeras, Pantalones, Camperas) para clasificar los productos.</p>
-            </div>
-          ) : (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">CATEGORÍA</th>
-                    <th scope="col">CATEGORÍA PADRE (JERARQUÍA)</th>
-                    <th scope="col" className="actions-header">ACCIONES</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {categoriasFiltradas.map((cat) => (
-                    <tr key={cat.id} className="table-row-hover">
-                      <th scope="row" className="row-title">
-                        <strong>{cat.nombre}</strong>
-                      </th>
-                      <td>
-                        {cat.padreNombre ? (
-                          <span className="category-pill category-pill-icon">
-                            <FolderTree size={12} /> {cat.padreNombre}
-                          </span>
-                        ) : (
-                          <span className="category-pill category-pill-strong">
-                            Categoría principal
-                          </span>
-                        )}
-                      </td>
-                      <td className="actions">
-                        <button
-                          type="button"
-                          className="btn btn-icon"
-                          onClick={() => abrirEditarCategoria(cat)}
-                          title="Editar categoría"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-icon danger"
-                          onClick={() => handleEliminarCategoria(cat.id, cat.nombre)}
-                          title="Eliminar categoría"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* =========================================================
-          CONTENIDO: PESTAÑA ATRIBUTOS, COLORES Y ESCALAS
-          ========================================================= */}
-      {pestanaActiva === 'atributos' && (
-        <section className="card">
-          <header className="card-head">
-            <div>
-              <h2>
-                <Tags size={18} />
-                {metaAtributo.plural} ({listaAtributosActual.length})
-              </h2>
-            </div>
-
-            <div className="filter-search-box">
-              <Search size={14} className="filter-icon" />
-              <input
-                type="text"
-                placeholder={`Buscar en ${metaAtributo.plural.toLowerCase()}...`}
-                value={busquedaAtributo}
-                onChange={(e) => setBusquedaAtributo(e.target.value)}
-              />
-            </div>
-          </header>
-
-          <div className="sub-tabs-bar">
-            <button
-              type="button"
-              className={`btn btn-small${tipoAtributo === 'generos' ? ' btn-primary' : ''}`}
-              onClick={() => { setTipoAtributo('generos'); setBusquedaAtributo(''); }}
-            >
-              Géneros ({generos.length})
-            </button>
-            <button
-              type="button"
-              className={`btn btn-small${tipoAtributo === 'temporadas' ? ' btn-primary' : ''}`}
-              onClick={() => { setTipoAtributo('temporadas'); setBusquedaAtributo(''); }}
-            >
-              Temporadas ({temporadas.length})
-            </button>
-            <button
-              type="button"
-              className={`btn btn-small${tipoAtributo === 'fits' ? ' btn-primary' : ''}`}
-              onClick={() => { setTipoAtributo('fits'); setBusquedaAtributo(''); }}
-            >
-              Fits ({fits.length})
-            </button>
-            <button
-              type="button"
-              className={`btn btn-small${tipoAtributo === 'materiales' ? ' btn-primary' : ''}`}
-              onClick={() => { setTipoAtributo('materiales'); setBusquedaAtributo(''); }}
-            >
-              Materiales ({materiales.length})
-            </button>
-            <button
-              type="button"
-              className={`btn btn-small${tipoAtributo === 'colores' ? ' btn-primary' : ''}`}
-              onClick={() => { setTipoAtributo('colores'); setBusquedaAtributo(''); }}
-            >
-              <Palette size={14} /> Colores ({colores.length})
-            </button>
-            <button
-              type="button"
-              className={`btn btn-small${tipoAtributo === 'escalas' ? ' btn-primary' : ''}`}
-              onClick={() => { setTipoAtributo('escalas'); setBusquedaAtributo(''); }}
-            >
-              <Ruler size={14} /> Escalas de talle ({escalasTalle.length})
-            </button>
-          </div>
-
-          {atributosFiltrados.length === 0 ? (
-            <div className="empty-state">
-              <Tags size={48} className="empty-icon" />
-              <h3>No se encontraron registros de {metaAtributo.plural.toLowerCase()}</h3>
-              {metaAtributo.nuevoLabel ? (
-                <p>Hacé clic en &quot;{metaAtributo.nuevoLabel}&quot; para agregar el primer registro a este catálogo.</p>
-              ) : (
-                <p>No hay escalas de talle cargadas en el sistema.</p>
               )}
-            </div>
-          ) : tipoAtributo === 'colores' ? (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">COLOR</th>
-                    <th scope="col">CÓDIGO CORTO</th>
-                    <th scope="col">MUESTRA / HEX</th>
-                    <th scope="col" className="actions-header">ACCIONES</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {atributosFiltrados.map((item) => (
-                    <tr key={item.id} className="table-row-hover">
-                      <th scope="row" className="row-title">
-                        <strong>{item.nombre}</strong>
-                      </th>
-                      <td>
-                        <code>{item.codigo}</code>
-                      </td>
-                      <td>
-                        <span className="color-cell-chip">
-                          <input
-                            type="color"
-                            className="color-swatch-dot"
-                            value={expandirHexColor(item.codigoHex)}
-                            readOnly
-                            tabIndex={-1}
-                            aria-hidden="true"
-                          />
-                          <code>{item.codigoHex}</code>
-                        </span>
-                      </td>
-                      <td className="actions">
-                        <button
-                          type="button"
-                          className="btn btn-icon"
-                          onClick={() => abrirEditarAtributo(item)}
-                          title="Editar color"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-icon danger"
-                          onClick={() => handleEliminarAtributo(item.id, item.nombre)}
-                          title="Eliminar color"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : tipoAtributo === 'escalas' ? (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">ESCALA DE TALLES</th>
-                    <th scope="col">TALLES HABILITADOS (EN ORDEN)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {atributosFiltrados.map((esc) => {
-                    const talles = tallesPorEscala[esc.id] || [];
-                    return (
-                      <tr key={esc.id} className="table-row-hover">
-                        <th scope="row" className="row-title">
-                          <strong>{esc.nombre}</strong>
-                        </th>
-                        <td>
-                          {talles.length === 0 ? (
-                            <span className="muted text-sm">Sin talles asociados</span>
-                          ) : (
-                            <div className="pill-list">
-                              {talles.map((t) => (
-                                <span key={t.id} className="talle-pill">
-                                  {t.nombre}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col" className="col-wide">
-                      NOMBRE DE {metaAtributo.singular.toUpperCase()}
-                    </th>
-                    <th scope="col" className="actions-header">ACCIONES</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {atributosFiltrados.map((item) => (
-                    <tr key={item.id} className="table-row-hover">
-                      <th scope="row" className="row-title">
-                        <strong>{item.nombre}</strong>
-                      </th>
-                      <td className="actions">
-                        <button
-                          type="button"
-                          className="btn btn-icon"
-                          onClick={() => abrirEditarAtributo(item)}
-                          title={`Editar ${metaAtributo.singular}`}
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-icon danger"
-                          onClick={() => handleEliminarAtributo(item.id, item.nombre)}
-                          title={`Eliminar ${metaAtributo.singular}`}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            </section>
           )}
-        </section>
+
+          {/* =========================================================
+          CONTENIDO: PESTAÑA ATRIBUTOS (GÉNEROS, TEMPORADAS, FITS, MATERIALES)
+          ========================================================= */}
+          {pestanaActiva === 'atributos' && (
+            <section className="card">
+              <header className="card-head">
+                <div>
+                  <h2>
+                    <Tags size={18} />
+                    {metaAtributo.plural} ({listaAtributosActual.length})
+                  </h2>
+                </div>
+
+                <div className="filter-search-box">
+                  <Search size={14} className="filter-icon" />
+                  <input
+                    type="text"
+                    placeholder={`Buscar en ${metaAtributo.plural.toLowerCase()}...`}
+                    value={busquedaAtributo}
+                    onChange={(e) => setBusquedaAtributo(e.target.value)}
+                  />
+                </div>
+              </header>
+
+              <div className="sub-tabs-bar">
+                <button
+                  type="button"
+                  className={`btn btn-small${tipoAtributo === 'generos' ? ' btn-primary' : ''}`}
+                  onClick={() => { setTipoAtributo('generos'); setBusquedaAtributo(''); }}
+                >
+                  Géneros ({generos.length})
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-small${tipoAtributo === 'temporadas' ? ' btn-primary' : ''}`}
+                  onClick={() => { setTipoAtributo('temporadas'); setBusquedaAtributo(''); }}
+                >
+                  Temporadas ({temporadas.length})
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-small${tipoAtributo === 'fits' ? ' btn-primary' : ''}`}
+                  onClick={() => { setTipoAtributo('fits'); setBusquedaAtributo(''); }}
+                >
+                  Fits ({fits.length})
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-small${tipoAtributo === 'materiales' ? ' btn-primary' : ''}`}
+                  onClick={() => { setTipoAtributo('materiales'); setBusquedaAtributo(''); }}
+                >
+                  Materiales ({materiales.length})
+                </button>
+              </div>
+
+              {atributosFiltrados.length === 0 ? (
+                <div className="empty-state">
+                  <Tags size={48} className="empty-icon" />
+                  <h3>No se encontraron {metaAtributo.plural.toLowerCase()}</h3>
+                  <p>
+                    {busquedaAtributo
+                      ? `No hay ${metaAtributo.plural.toLowerCase()} que coincidan con la búsqueda "${busquedaAtributo}".`
+                      : metaAtributo.nuevoLabel
+                        ? `Hacé clic en "${metaAtributo.nuevoLabel}" para agregar el primer registro a este catálogo.`
+                        : `No hay ${metaAtributo.plural.toLowerCase()} cargados en el sistema.`}
+                  </p>
+                </div>
+              ) : (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col" className="col-wide">
+                          NOMBRE DE {metaAtributo.singular.toUpperCase()}
+                        </th>
+                        <th scope="col" className="actions-header">ACCIONES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {atributosFiltrados.map((item) => (
+                        <tr key={item.id} className="table-row-hover">
+                          <th scope="row" className="row-title">
+                            <strong>{item.nombre}</strong>
+                          </th>
+                          <td className="actions">
+                            <button
+                              type="button"
+                              className="btn btn-icon"
+                              onClick={() => abrirEditarAtributo(item)}
+                              title={`Editar ${metaAtributo.singular}`}
+                            >
+                              <Edit3 size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-icon danger"
+                              onClick={() => handleEliminarAtributo(item.id, item.nombre)}
+                              title={`Eliminar ${metaAtributo.singular}`}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* =========================================================
+          CONTENIDO: PESTAÑA TALLES Y COLORES
+          ========================================================= */}
+          {pestanaActiva === 'talles_colores' && (
+            <section className="card">
+              <header className="card-head">
+                <div>
+                  <h2>
+                    {tipoAtributo === 'colores' ? (
+                      <>
+                        <Palette size={18} /> Colores ({colores.length})
+                      </>
+                    ) : (
+                      <>
+                        <Ruler size={18} /> Escalas de talle ({escalasTalle.length})
+                      </>
+                    )}
+                  </h2>
+                </div>
+
+                <div className="filter-search-box">
+                  <Search size={14} className="filter-icon" />
+                  <input
+                    type="text"
+                    placeholder={`Buscar en ${metaAtributo.plural.toLowerCase()}...`}
+                    value={busquedaAtributo}
+                    onChange={(e) => setBusquedaAtributo(e.target.value)}
+                  />
+                </div>
+              </header>
+
+              <div className="sub-tabs-bar">
+                <button
+                  type="button"
+                  className={`btn btn-small${tipoAtributo === 'colores' ? ' btn-primary' : ''}`}
+                  onClick={() => { setTipoAtributo('colores'); setBusquedaAtributo(''); }}
+                >
+                  <Palette size={14} /> Colores ({colores.length})
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-small${tipoAtributo === 'escalas' ? ' btn-primary' : ''}`}
+                  onClick={() => { setTipoAtributo('escalas'); setBusquedaAtributo(''); }}
+                >
+                  <Ruler size={14} /> Escalas de talle ({escalasTalle.length})
+                </button>
+              </div>
+
+              {atributosFiltrados.length === 0 ? (
+                <div className="empty-state">
+                  {tipoAtributo === 'colores' ? (
+                    <Palette size={48} className="empty-icon" />
+                  ) : (
+                    <Ruler size={48} className="empty-icon" />
+                  )}
+                  <h3>No se encontraron {metaAtributo.plural.toLowerCase()}</h3>
+                  <p>
+                    {busquedaAtributo
+                      ? `No hay ${metaAtributo.plural.toLowerCase()} que coincidan con la búsqueda "${busquedaAtributo}".`
+                      : metaAtributo.nuevoLabel
+                        ? `Hacé clic en "${metaAtributo.nuevoLabel}" para agregar el primer registro a este catálogo.`
+                        : 'No hay escalas de talle cargadas en el sistema.'}
+                  </p>
+                </div>
+              ) : tipoAtributo === 'colores' ? (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">COLOR</th>
+                        <th scope="col">CÓDIGO CORTO</th>
+                        <th scope="col">MUESTRA / HEX</th>
+                        <th scope="col" className="actions-header">ACCIONES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {atributosFiltrados.map((item) => (
+                        <tr key={item.id} className="table-row-hover">
+                          <th scope="row" className="row-title">
+                            <strong>{item.nombre}</strong>
+                          </th>
+                          <td>
+                            <code>{item.codigo}</code>
+                          </td>
+                          <td>
+                            <span className="color-cell-chip">
+                              <input
+                                type="color"
+                                className="color-swatch-dot"
+                                value={expandirHexColor(item.codigoHex)}
+                                readOnly
+                                tabIndex={-1}
+                                aria-hidden="true"
+                              />
+                              <code>{item.codigoHex}</code>
+                            </span>
+                          </td>
+                          <td className="actions">
+                            <button
+                              type="button"
+                              className="btn btn-icon"
+                              onClick={() => abrirEditarAtributo(item)}
+                              title="Editar color"
+                            >
+                              <Edit3 size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-icon danger"
+                              onClick={() => handleEliminarAtributo(item.id, item.nombre)}
+                              title="Eliminar color"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">ESCALA DE TALLES</th>
+                        <th scope="col">TALLES HABILITADOS (EN ORDEN)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {atributosFiltrados.map((esc) => {
+                        const talles = tallesPorEscala[esc.id] || [];
+                        return (
+                          <tr key={esc.id} className="table-row-hover">
+                            <th scope="row" className="row-title">
+                              <strong>{esc.nombre}</strong>
+                            </th>
+                            <td>
+                              {talles.length === 0 ? (
+                                <span className="muted text-sm">Sin talles asociados</span>
+                              ) : (
+                                <div className="pill-list">
+                                  {talles.map((t) => (
+                                    <span key={t.id} className="talle-pill">
+                                      {t.nombre}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
+        </>
       )}
 
       {/* =========================================================
@@ -1494,16 +1724,6 @@ export default function Productos() {
         </div>
       )}
 
-      {/* =========================================================
-          MODAL: VARIANTES DE UN PRODUCTO
-          ========================================================= */}
-      {productoVariantesActivo && (
-        <VariantesProductoModal
-          producto={productoVariantesActivo}
-          colores={colores}
-          onClose={() => setProductoVariantesActivo(null)}
-        />
-      )}
 
       {/* =========================================================
           MODAL: CATEGORÍA (ALTA / EDICIÓN)

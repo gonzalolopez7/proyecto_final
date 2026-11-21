@@ -478,7 +478,6 @@ button {
 }
 
 .page-head p {
-  max-width: 62ch;
   margin-top: 4px;
   color: var(--ink-secondary);
   font-size: 15px;
@@ -821,18 +820,20 @@ td.actions {
   display: table-cell;
   white-space: nowrap;
   vertical-align: middle;
+  width: 1%;
 }
 
-td.actions > .btn {
+td.actions>.btn {
   vertical-align: middle;
 }
 
-td.actions > .btn + .btn {
+td.actions>.btn+.btn {
   margin-left: 6px;
 }
 
 th.actions-header {
   white-space: nowrap;
+  width: 1%;
 }
 
 .pagination-bar {
@@ -935,6 +936,10 @@ th.actions-header {
   overflow-y: auto;
 }
 
+.modal-content.modal-md {
+  max-width: 580px;
+}
+
 .modal-content.modal-lg {
   max-width: 720px;
 }
@@ -975,6 +980,11 @@ th.actions-header {
   display: flex;
   gap: 6px;
   align-items: center;
+}
+
+.sku-input-group input {
+  flex: 1;
+  min-width: 0;
 }
 
 .variante-form-actions {
@@ -1290,6 +1300,159 @@ th.actions-header {
   align-items: start;
 }
 
+/* =========================================================
+   NAVEGACIÓN SECUENCIAL (DRILL-DOWN & BREADCRUMBS)
+   ========================================================= */
+.breadcrumb-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 8px 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  flex-wrap: wrap;
+}
+
+.breadcrumb-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.breadcrumb-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 8px;
+}
+
+.breadcrumb-item-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb-separator {
+  color: var(--ink-muted);
+  opacity: 0.6;
+}
+
+.breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-secondary);
+}
+
+.breadcrumb-link {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--tape);
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.breadcrumb-link:hover {
+  background: var(--tape-light);
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.breadcrumb-current {
+  color: var(--ink);
+  font-weight: 700;
+  background: var(--surface-muted);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.drilldown-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.drilldown-summary-card {
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.drilldown-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.drilldown-summary-titles h2 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.drilldown-parent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-secondary);
+  background: var(--surface-muted);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.drilldown-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border-line);
+}
+
+.drilldown-meta-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.drilldown-meta-item .talle-pill {
+  width: fit-content;
+  align-self: flex-start;
+}
+
+.drilldown-meta-item .meta-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -1327,12 +1490,12 @@ th.actions-header {
   min-width: 0;
 }
 
-.form-section + .form-section {
+.form-section+.form-section {
   padding-top: 18px;
   border-top: 1px dashed #C4C8BC;
 }
 
-.form-section > legend {
+.form-section>legend {
   float: left;
   width: 100%;
   margin: 0 0 14px;
@@ -1343,7 +1506,7 @@ th.actions-header {
   color: var(--ink);
 }
 
-.form-section > legend + * {
+.form-section>legend+* {
   clear: both;
 }
 
@@ -1494,18 +1657,23 @@ th.actions-header {
   0% {
     transform: rotate(4deg);
   }
+
   22% {
     transform: rotate(-2.8deg);
   }
+
   44% {
     transform: rotate(1.6deg);
   }
+
   66% {
     transform: rotate(-0.8deg);
   }
+
   84% {
     transform: rotate(0.3deg);
   }
+
   100% {
     transform: rotate(0);
   }
@@ -1849,6 +2017,7 @@ th.actions-header {
    12. RESPONSIVE Y ACCESIBILIDAD DE MOVIMIENTO
    ========================================================= */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -1955,7 +2124,7 @@ th.actions-header {
     flex-wrap: wrap;
   }
 
-  .page-head > .btn {
+  .page-head>.btn {
     align-self: flex-start;
   }
 
@@ -1964,7 +2133,7 @@ th.actions-header {
   }
 
   .card table,
-  .table-scroll > table {
+  .table-scroll>table {
     min-width: 620px;
   }
 
@@ -2087,7 +2256,7 @@ th.actions-header {
     align-items: stretch;
   }
 
-  .filter-controls > * {
+  .filter-controls>* {
     width: 100%;
   }
 
